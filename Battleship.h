@@ -15,6 +15,7 @@ public:
     ~GeneralBattleship() {}
 
     virtual void printSymbol() = 0;
+    virtual char getSymbol() = 0;
     int getLength()
     {
         return this->length;
@@ -31,6 +32,11 @@ public:
     {
         cout << "A\t";
     }
+
+    char getSymbol()
+    {
+        return 'A';
+    }
 };
 
 class Battleship : public GeneralBattleship
@@ -42,6 +48,11 @@ public:
     void printSymbol()
     {
         cout << "B\t";
+    }
+
+    char getSymbol()
+    {
+        return 'B';
     }
 };
 
@@ -55,6 +66,11 @@ public:
     {
         cout << "C\t";
     }
+
+    char getSymbol()
+    {
+        return 'C';
+    }
 };
 
 class Destroyer : public GeneralBattleship
@@ -67,6 +83,11 @@ public:
     {
         cout << "D\t";
     }
+
+    char getSymbol()
+    {
+        return 'D';
+    }
 };
 
 class Submarine : public GeneralBattleship
@@ -78,5 +99,10 @@ public:
     void printSymbol()
     {
         cout << "S\t";
+    }
+
+    char getSymbol()
+    {
+        return 'S';
     }
 };

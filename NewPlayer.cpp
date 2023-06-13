@@ -55,7 +55,11 @@ void NewPlayer::newShip(ShipType t, char col, int row, char orientation)
     return;
 }
 
-void NewPlayer::showGrid()
+void NewPlayer::showMap()
 {
-    grid->displayGrid();
+    grid->displayMap();
 }
+
+// bool NewPlayer::attack(NewPlayer *p, char col, int row)
+//{
+// }

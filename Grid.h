@@ -11,10 +11,18 @@ using namespace std;
 #define MAXROWS 10
 #define MAXCOLS 10
 
+enum Attempt
+{
+    hit,
+    miss,
+    none
+};
+
 class Grid
 {
 private:
     vector<vector<char>> map{MAXROWS, vector<char>(MAXCOLS, '-')};
+    vector<vector<char>> attemptsMap{MAXROWS, vector<char>(MAXCOLS, '-')};
     vector<GeneralBattleship *> battleships{};
 
 public:
@@ -26,7 +34,30 @@ public:
             delete i;
     }
 
-    void displayGrid()
+    void updateMap()
+    {
+        // we update the map only for the last element because we call this function after we add another ship
+        if (!battleships.empty())
+        {
+            auto bs = battleships.back();
+            if (bs->orientation == 'H')
+            {
+                for (int i = bs->col; i < bs->col + bs->length; i++)
+                {
+                    map.at(bs->row).at(i) = bs->getSymbol();
+                }
+            }
+            else if (bs->orientation == 'V')
+            {
+                for (int i = bs->row; i > bs->row - bs->length; i--)
+                {
+                    map.at(i).at(bs->col) = bs->getSymbol();
+                }
+            }
+        }
+    }
+
+    void displayMap()
     {
         cout << " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ\n\n"
              << endl;
@@ -35,11 +66,7 @@ public:
             cout << i + 1 << "\t";
             for (int j = 0; j < MAXCOLS; j++)
             {
-                GeneralBattleship *bs = isOnBoat(i, j);
-                if (bs != nullptr)
-                    bs->printSymbol();
-                else
-                    cout << "-\t";
+                cout << map.at(i).at(j) << "\t";
             }
             cout << "\n\n\n";
         }
@@ -85,28 +112,8 @@ public:
         }
 
         this->battleships.push_back(bs);
-        cout << "Teh ship has been added successfully!" << endl;
+        cout << "The ship has been added successfully!" << endl;
+        updateMap();
         return true;
-    }
-
-    GeneralBattleship *isOnBoat(int row, int col)
-    {
-        for (auto bs : battleships)
-        {
-            if (bs->orientation == 'H')
-            {
-                if (row == bs->row && (col >= bs->col && col <= (bs->col + bs->getLength() - 1)))
-                    return bs;
-                continue;
-            }
-            else if (bs->orientation == 'V')
-            {
-                if (col == bs->col && (row <= bs->row && row >= (bs->row - bs->getLength() + 1)))
-                    return bs;
-                continue;
-            }
-        }
-
-        return nullptr;
     }
 };

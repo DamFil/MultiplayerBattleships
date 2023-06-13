@@ -30,8 +30,8 @@ public:
     }
 
     void newShip(ShipType t, char col, int row, char orientation);
-    void showGrid();
-    void attack(NewPlayer *player);
+    void showMap();
+    bool attack(NewPlayer *player, char col, int row);
 
 private:
     inline bool checkBound(char col, int row, int length, char orientation);
