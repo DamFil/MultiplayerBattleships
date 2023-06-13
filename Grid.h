@@ -57,7 +57,10 @@ public:
                     for (int i = 0; i < bs->getLength(); i++)
                     {
                         if (bs->col + i >= bts->col && bs->col + i <= (bts->col + bts->getLength() - 1))
+                        {
+                            cout << "The added ship collides with an already exisiting one!" << endl;
                             return false;
+                        }
                     }
                 }
                 else
@@ -70,7 +73,10 @@ public:
                     for (int i = 0; i < bs->getLength(); i++)
                     {
                         if (bs->row + i <= bts->row && bs->row + i >= (bts->row + bts->getLength() + 1))
+                        {
+                            cout << "The added ship collides with an already existing one!" << endl;
                             return false;
+                        }
                     }
                 }
                 else
@@ -79,6 +85,7 @@ public:
         }
 
         this->battleships.push_back(bs);
+        cout << "Teh ship has been added successfully!" << endl;
         return true;
     }
 
