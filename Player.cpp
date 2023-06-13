@@ -22,6 +22,15 @@ bool Player::parseCell(string cell, char *col, int *row)
     return true;
 }
 
+inline bool Player::isOnBoat(int row, char col)
+{
+    GeneralBattleship *bs = grid->onBoat(row, ctoi.at(col));
+    if (bs == nullptr)
+        return false;
+
+    return true;
+}
+
 // checks that the ship can be placed on the grid by checking the bounds
 inline bool Player::checkBound(ShipType t, char col, int row, char orientation)
 {
@@ -33,67 +42,85 @@ inline bool Player::checkBound(ShipType t, char col, int row, char orientation)
         if (orientation == 'H')
         {
             if (col > 'F')
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) && isOnBoat(row, col + 1) || isOnBoat(row, col + 2) || isOnBoat(row, col + 3) || isOnBoat(row, col + 4))
+                return false;
+
+            ans = true;
         }
         else
         {
             if (row < 5)
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) || isOnBoat(row - 1, col) || isOnBoat(row - 2, col) || isOnBoat(row - 3, col) || isOnBoat(row - 4, col))
+                return false;
+
+            ans = true;
         }
         break;
     case B:
         if (orientation == 'H')
         {
             if (col > 'G')
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) || isOnBoat(row, col + 1) || isOnBoat(row, col + 2) || isOnBoat(row, col + 3))
+                return false;
+
+            ans = true;
         }
         else
         {
             if (row < 4)
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) || isOnBoat(row - 1, col) || isOnBoat(row - 2, col) || isOnBoat(row - 3, col))
+                return false;
+
+            ans = true;
         }
         break;
     case C:
         if (orientation == 'H')
         {
             if (col > 'H')
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) || isOnBoat(row, col + 1) || isOnBoat(row, col + 2))
+                return false;
+
+            ans = true;
         }
         else
         {
             if (row < 3)
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) || isOnBoat(row - 1, col) || isOnBoat(row - 2, col))
+                return false;
+
+            ans = true;
         }
         break;
     case D:
         if (orientation == 'H')
         {
             if (col > 'I') // i.e. col == J
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) || isOnBoat(row, col + 1))
+                return false;
+
+            ans = true;
         }
         else
         {
             if (row < 2) // i.e. row == 1
-                ans = false;
-            else
-                ans = true;
+                return false;
+            else if (isOnBoat(row, col) || isOnBoat(row - 1, col))
+                return false;
+
+            ans = true;
         }
         break;
     case S:
+        if (isOnBoat(row, col))
+            return false;
         ans = true; // regardless of the orientation it is fine since it occupies only 1 cell
         break;
     }
@@ -147,7 +174,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Aircraft Carrier: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        AircraftCarrier *ac = new AircraftCarrier(orientation, row - 1, itoc.at(col));
+        AircraftCarrier *ac = new AircraftCarrier(orientation, row - 1, ctoi.at(col));
         grid->addShip(ac);
         break;
     }
@@ -155,7 +182,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Battleship: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Battleship *bs = new Battleship(orientation, row - 1, itoc.at(col));
+        Battleship *bs = new Battleship(orientation, row - 1, ctoi.at(col));
         grid->addShip(bs);
         break;
     }
@@ -163,7 +190,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Cruiser: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Cruiser *cs = new Cruiser(orientation, row - 1, itoc.at(col));
+        Cruiser *cs = new Cruiser(orientation, row - 1, ctoi.at(col));
         grid->addShip(cs);
         break;
     }
@@ -171,7 +198,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Destroyer: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Destroyer *ds = new Destroyer(orientation, row - 1, itoc.at(col));
+        Destroyer *ds = new Destroyer(orientation, row - 1, ctoi.at(col));
         grid->addShip(ds);
         break;
     }
@@ -179,7 +206,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Submarine: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Submarine *sm = new Submarine(orientation, row - 1, itoc.at(col));
+        Submarine *sm = new Submarine(orientation, row - 1, ctoi.at(col));
         grid->addShip(sm);
         break;
     }

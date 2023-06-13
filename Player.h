@@ -35,12 +35,13 @@ public:
 
 private:
     bool parseCell(string cell, char *col, int *row);
+    inline bool isOnBoat(int row, char col);
     inline bool checkBound(ShipType t, char col, int row, char orientation);
     void gettingShipInfo(ShipType t, char *col, int *row, char *orientation);
     void getShip(ShipType t);
     void getAllShips();
 
-    map<char, int> itoc =
+    map<char, int> ctoi =
         {{'A', 0},
          {'B', 1},
          {'C', 2},

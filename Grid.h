@@ -35,7 +35,10 @@ public:
             cout << i + 1 << "\t";
             for (int j = 0; j < MAXCOLS; j++)
             {
-                if (!onBoat(i, j)) // onBoat takes care of the printing
+                GeneralBattleship *bs = onBoat(i, j);
+                if (bs != nullptr)
+                    bs->printSymbol();
+                else
                     cout << "-\t";
             }
             cout << "\n\n\n";
@@ -47,10 +50,9 @@ public:
         this->battleships.push_back(bs);
     }
 
-private:
-    bool onBoat(int row, int col)
+    GeneralBattleship *onBoat(int row, int col)
     {
-        bool ans = false;
+        GeneralBattleship *ans = nullptr;
 
         for (auto bs : battleships)
         {
@@ -58,13 +60,12 @@ private:
             {
                 if (row != bs->row)
                 {
-                    ans = false;
+                    ans = nullptr;
                     continue;
                 }
                 if (col >= bs->col && col <= (bs->col + bs->getLength() - 1))
                 {
-                    bs->printSymbol();
-                    ans = true;
+                    ans = bs;
                     break;
                 }
             }
@@ -72,13 +73,12 @@ private:
             {
                 if (col != bs->col)
                 {
-                    ans = false;
+                    ans = bs;
                     continue;
                 }
                 if (row <= bs->row && row >= (bs->row - bs->getLength() + 1))
                 {
-                    bs->printSymbol();
-                    ans = true;
+                    ans = bs;
                     break;
                 }
             }
