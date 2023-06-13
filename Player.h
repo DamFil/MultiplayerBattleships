@@ -29,6 +29,7 @@ public:
     }
 
     void initializeGrid();
+    void showGrid();
     void attack(Player *player);
 
 private:

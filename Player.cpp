@@ -137,35 +137,45 @@ void Player::getShip(ShipType t)
 
     switch (t)
     {
-    case A:
+    case ShipType::A:
+    {
         cout << "Please enter the starting cell for the Aircraft Carrier: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
         AircraftCarrier *ac = new AircraftCarrier(orientation, row, col);
         grid->addShip(ac);
         break;
-    case B:
+    }
+    case ShipType::B:
+    {
         cout << "Please enter the starting cell for the Battleship: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
         Battleship *bs = new Battleship(orientation, row, col);
         grid->addShip(bs);
         break;
-    case C:
+    }
+    case ShipType::C:
+    {
         cout << "Please enter the starting cell for the Cruiser: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
         Cruiser *cs = new Cruiser(orientation, row, col);
         grid->addShip(cs);
         break;
-    case D:
+    }
+    case ShipType::D:
+    {
         cout << "Please enter the starting cell for the Destroyer: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
         Destroyer *ds = new Destroyer(orientation, row, col);
         grid->addShip(ds);
         break;
-    case S:
+    }
+    case ShipType::S:
+    {
         cout << "Please enter the starting cell for the Submarine: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
         Submarine *sm = new Submarine(orientation, row, col);
         break;
+    }
     }
 }
 
@@ -182,11 +192,12 @@ void Player::getAllShips()
 
 void Player::initializeGrid()
 {
-    int ans;
+    char ans;
+    cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
     cout << this->name << ":" << endl;
     cout << "Start Game (Y/Q)?" << endl;
     cin >> ans;
-    while (ans != 'Y' || ans != 'Q')
+    while (ans != 'Y' && ans != 'Q')
     {
         cout << "Answer with Y(yes) or with Q(quit)" << endl;
         cin >> ans;
@@ -196,4 +207,10 @@ void Player::initializeGrid()
         exit(EXIT_SUCCESS);
 
     getAllShips();
+}
+
+// wrapper for Grid object's display grid function
+void Player::showGrid()
+{
+    grid->displayGrid();
 }

@@ -15,7 +15,7 @@ class Grid
 {
 private:
     vector<vector<char>> map{MAXROWS, vector<char>(MAXCOLS, '-')};
-    vector<GeneralBattleship *> battleships{7};
+    vector<GeneralBattleship *> battleships{};
 
 public:
     Grid() {}
@@ -32,12 +32,12 @@ public:
         for (int i = 0; i < MAXROWS; i++)
         {
             cout << i + 1 << "\t";
-            for (int j = 0; j < MAXCOLS + 1; j++)
+            for (int j = 0; j < MAXCOLS; j++)
             {
                 if (!onBoat(i, j)) // onBoat takes care of the printing
                     cout << "-\t";
-                cout << "\n";
             }
+            cout << "\n\n\n";
         }
     }
 
