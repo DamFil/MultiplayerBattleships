@@ -94,7 +94,7 @@ public:
             }
             else if (bs->orientation == 'V')
             {
-                if (col == bs->col && (row <= bs->row && row >= (bs->row + bs->getLength() + 1)))
+                if (col == bs->col && (row <= bs->row && row >= (bs->row - bs->getLength() + 1)))
                     return bs;
                 continue;
             }
