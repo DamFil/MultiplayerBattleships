@@ -35,7 +35,7 @@ public:
             cout << i + 1 << "\t";
             for (int j = 0; j < MAXCOLS; j++)
             {
-                GeneralBattleship *bs = onBoat(i, j);
+                GeneralBattleship *bs = isOnBoat(i, j);
                 if (bs != nullptr)
                     bs->printSymbol();
                 else
@@ -45,45 +45,91 @@ public:
         }
     }
 
-    void addShip(GeneralBattleship *bs)
+    bool addShip(GeneralBattleship *bs)
     {
-        this->battleships.push_back(bs);
-    }
-
-    GeneralBattleship *onBoat(int row, int col)
-    {
-        GeneralBattleship *ans = nullptr;
-
-        for (auto bs : battleships)
+        for (auto bts : battleships)
         {
             if (bs->orientation == 'H')
             {
-                if (row != bs->row)
+                if (bs->row == bts->row)
                 {
-                    ans = nullptr;
+                    for (int i = 0; i < bs->getLength(); i++)
+                    {
+                        if (bs->col + i == bts->col)
+                            return false;
+                    }
+                }
+                else
                     continue;
-                }
-                if (col >= bs->col && col <= (bs->col + bs->getLength() - 1))
-                {
-                    ans = bs;
-                    break;
-                }
             }
-            else
+            else if (bs->orientation == 'V')
             {
-                if (col != bs->col)
+                if (bs->col == bts->col)
                 {
-                    ans = bs;
+                    for (int i = 0; i < bs->getLength(); i++)
+                    {
+                        if (bs->row + i == bts->row)
+                            return false;
+                    }
+                }
+                else
                     continue;
-                }
-                if (row <= bs->row && row >= (bs->row - bs->getLength() + 1))
-                {
-                    ans = bs;
-                    break;
-                }
             }
         }
 
-        return ans;
+        this->battleships.push_back(bs);
+        return true;
     }
+
+    GeneralBattleship *isOnBoat(int row, int col)
+    {
+        for (auto bs : battleships)
+        {
+            if (row == bs->row && col == bs->col)
+                return bs;
+            else
+                continue;
+        }
+
+        return nullptr;
+    }
+
+    /*
+        GeneralBattleship *onBoat(int row, int col)
+        {
+            GeneralBattleship *ans = nullptr;
+
+            for (auto bs : battleships)
+            {
+                if (bs->orientation == 'H')
+                {
+                    if (row != bs->row)
+                    {
+                        ans = nullptr;
+                        continue;
+                    }
+                    if (col >= bs->col && col <= (bs->col + bs->getLength() - 1))
+                    {
+                        ans = bs;
+                        break;
+                    }
+                }
+                else
+                {
+                    if (col != bs->col)
+                    {
+                        ans = bs;
+                        continue;
+                    }
+                    if (row <= bs->row && row >= (bs->row - bs->getLength() + 1))
+                    {
+                        ans = bs;
+                        break;
+                    }
+                }
+            }
+
+            return ans;
+        }
+    */
 };
