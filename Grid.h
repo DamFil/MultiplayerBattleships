@@ -4,7 +4,7 @@
 #include <string>
 #include <iostream>
 #include "Battleship.h"
-#include "Player.h"
+#include "NewPlayer.h"
 
 using namespace std;
 
@@ -47,6 +47,7 @@ public:
 
     bool addShip(GeneralBattleship *bs)
     {
+        // checks for boats that would collide - returns false if the new boat would collide with an already added boat
         for (auto bts : battleships)
         {
             if (bs->orientation == 'H')
@@ -55,7 +56,7 @@ public:
                 {
                     for (int i = 0; i < bs->getLength(); i++)
                     {
-                        if (bs->col + i == bts->col)
+                        if (bs->col + i >= bts->col && bs->col + i <= (bts->col + bts->getLength() - 1))
                             return false;
                     }
                 }
@@ -68,7 +69,7 @@ public:
                 {
                     for (int i = 0; i < bs->getLength(); i++)
                     {
-                        if (bs->row + i == bts->row)
+                        if (bs->row + i <= bts->row && bs->row + i >= (bts->row + bts->getLength() + 1))
                             return false;
                     }
                 }
@@ -85,51 +86,20 @@ public:
     {
         for (auto bs : battleships)
         {
-            if (row == bs->row && col == bs->col)
-                return bs;
-            else
+            if (bs->orientation == 'H')
+            {
+                if (row == bs->row && (col >= bs->col && col <= (bs->col + bs->getLength() - 1)))
+                    return bs;
                 continue;
+            }
+            else if (bs->orientation == 'V')
+            {
+                if (col == bs->col && (row <= bs->row && row >= (bs->row + bs->getLength() + 1)))
+                    return bs;
+                continue;
+            }
         }
 
         return nullptr;
     }
-
-    /*
-        GeneralBattleship *onBoat(int row, int col)
-        {
-            GeneralBattleship *ans = nullptr;
-
-            for (auto bs : battleships)
-            {
-                if (bs->orientation == 'H')
-                {
-                    if (row != bs->row)
-                    {
-                        ans = nullptr;
-                        continue;
-                    }
-                    if (col >= bs->col && col <= (bs->col + bs->getLength() - 1))
-                    {
-                        ans = bs;
-                        break;
-                    }
-                }
-                else
-                {
-                    if (col != bs->col)
-                    {
-                        ans = bs;
-                        continue;
-                    }
-                    if (row <= bs->row && row >= (bs->row - bs->getLength() + 1))
-                    {
-                        ans = bs;
-                        break;
-                    }
-                }
-            }
-
-            return ans;
-        }
-    */
 };

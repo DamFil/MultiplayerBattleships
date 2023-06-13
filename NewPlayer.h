@@ -31,7 +31,7 @@ public:
 
     void newShip(ShipType t, char col, int row, char orientation);
     void showGrid();
-    void attack(Player *player);
+    void attack(NewPlayer *player);
 
 private:
     inline bool checkBound(char col, int row, int length, char orientation);
