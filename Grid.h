@@ -22,7 +22,7 @@ class Grid
 {
 private:
     vector<vector<char>> map{MAXROWS, vector<char>(MAXCOLS, '-')};
-    vector<vector<char>> attemptsMap{MAXROWS, vector<char>(MAXCOLS, '-')};
+    vector<vector<char>> attemptsMap{map};
     vector<GeneralBattleship *> battleships{};
 
 public:
@@ -115,5 +115,28 @@ public:
         cout << "The ship has been added successfully!" << endl;
         updateMap();
         return true;
+    }
+
+    void updateAttemptsMap(int row, int col)
+    {
+        if (map.at(row).at(col) != '-')
+            attemptsMap.at(row).at(col) = 'X';
+        else
+            attemptsMap.at(row).at(col) = 'O';
+    }
+
+    void displayAttempsMap()
+    {
+        cout << " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ\n\n"
+             << endl;
+        for (int i = 0; i < MAXROWS; i++)
+        {
+            cout << i + 1 << "\t";
+            for (int j = 0; j < MAXCOLS; j++)
+            {
+                cout << attemptsMap.at(i).at(j) << "\t";
+            }
+            cout << "\n\n\n";
+        }
     }
 };

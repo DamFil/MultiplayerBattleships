@@ -60,6 +60,18 @@ void NewPlayer::showMap()
     grid->displayMap();
 }
 
-// bool NewPlayer::attack(NewPlayer *p, char col, int row)
-//{
-// }
+void NewPlayer::showAttemptsMap()
+{
+    grid->displayAttempsMap();
+}
+
+bool NewPlayer::attack(NewPlayer *p, char col, int row)
+{
+    if ((col >= 'A' && col <= 'J') && (row >= 1 && row <= 10))
+    {
+        p->grid->updateAttemptsMap(row - 1, ctoi[col]);
+        return true;
+    }
+
+    return false;
+}

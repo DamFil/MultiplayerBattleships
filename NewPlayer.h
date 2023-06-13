@@ -31,6 +31,7 @@ public:
 
     void newShip(ShipType t, char col, int row, char orientation);
     void showMap();
+    void showAttemptsMap();
     bool attack(NewPlayer *player, char col, int row);
 
 private:
