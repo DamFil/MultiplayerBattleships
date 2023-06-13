@@ -1,5 +1,10 @@
 #include "Player.h"
 
+/*
+TODO: WHEN YOU BOUNDS CHECK FOR SHIPS MAKE SURE THAT THE NEWLY ADDED SHIP IS NOT COLLIDING WITH ANOTHER ONE ON THE GRID
+
+*/
+
 bool Player::parseCell(string cell, char *col, int *row)
 {
     if (cell.length() < 2 || cell.length() > 3)
@@ -135,13 +140,14 @@ void Player::getShip(ShipType t)
     int row;
     char orientation;
 
+    // we are intializing with row - 1 because the inputted row will be from 1 - 10 and we need from 0 - 9
     switch (t)
     {
     case ShipType::A:
     {
         cout << "Please enter the starting cell for the Aircraft Carrier: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        AircraftCarrier *ac = new AircraftCarrier(orientation, row, col);
+        AircraftCarrier *ac = new AircraftCarrier(orientation, row - 1, itoc.at(col));
         grid->addShip(ac);
         break;
     }
@@ -149,7 +155,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Battleship: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Battleship *bs = new Battleship(orientation, row, col);
+        Battleship *bs = new Battleship(orientation, row - 1, itoc.at(col));
         grid->addShip(bs);
         break;
     }
@@ -157,7 +163,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Cruiser: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Cruiser *cs = new Cruiser(orientation, row, col);
+        Cruiser *cs = new Cruiser(orientation, row - 1, itoc.at(col));
         grid->addShip(cs);
         break;
     }
@@ -165,7 +171,7 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Destroyer: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Destroyer *ds = new Destroyer(orientation, row, col);
+        Destroyer *ds = new Destroyer(orientation, row - 1, itoc.at(col));
         grid->addShip(ds);
         break;
     }
@@ -173,7 +179,8 @@ void Player::getShip(ShipType t)
     {
         cout << "Please enter the starting cell for the Submarine: " << endl;
         gettingShipInfo(t, &col, &row, &orientation);
-        Submarine *sm = new Submarine(orientation, row, col);
+        Submarine *sm = new Submarine(orientation, row - 1, itoc.at(col));
+        grid->addShip(sm);
         break;
     }
     }

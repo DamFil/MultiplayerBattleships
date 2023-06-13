@@ -3,7 +3,7 @@
 int main()
 {
     Player *p = new Player();
-    // p->initializeGrid();
+    p->initializeGrid();
     p->showGrid();
 
     return 0;

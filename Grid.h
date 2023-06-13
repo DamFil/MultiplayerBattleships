@@ -28,7 +28,8 @@ public:
 
     void displayGrid()
     {
-        cout << " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ" << endl;
+        cout << " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ\n\n"
+             << endl;
         for (int i = 0; i < MAXROWS; i++)
         {
             cout << i + 1 << "\t";
@@ -58,9 +59,9 @@ private:
                 if (row != bs->row)
                 {
                     ans = false;
-                    break;
+                    continue;
                 }
-                if (col >= bs->col && col <= (bs->col + bs->getLength()) - 1)
+                if (col >= bs->col && col <= (bs->col + bs->getLength() - 1))
                 {
                     bs->printSymbol();
                     ans = true;
@@ -72,11 +73,11 @@ private:
                 if (col != bs->col)
                 {
                     ans = false;
-                    break;
+                    continue;
                 }
-                if (row >= bs->row && row <= (bs->row + bs->getLength()) - 1)
-
+                if (row <= bs->row && row >= (bs->row - bs->getLength() + 1))
                 {
+                    bs->printSymbol();
                     ans = true;
                     break;
                 }

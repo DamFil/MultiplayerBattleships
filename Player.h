@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include "Grid.h"
 #include "Battleship.h"
 
@@ -38,4 +39,16 @@ private:
     void gettingShipInfo(ShipType t, char *col, int *row, char *orientation);
     void getShip(ShipType t);
     void getAllShips();
+
+    map<char, int> itoc =
+        {{'A', 0},
+         {'B', 1},
+         {'C', 2},
+         {'D', 3},
+         {'E', 4},
+         {'F', 5},
+         {'G', 6},
+         {'H', 7},
+         {'I', 8},
+         {'J', 9}};
 };
