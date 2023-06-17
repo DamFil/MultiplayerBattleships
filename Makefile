@@ -2,8 +2,8 @@
 
 all: test a.out
 
-test: Game.cpp NewPlayer.h NewPlayer.cpp Grid.h Battleship.h
-	  g++ Game.cpp NewPlayer.cpp -o test
+test: Game/Game.cpp Game/NewPlayer.h Game/NewPlayer.cpp Game/Grid.h Game/Battleship.h
+	  g++ Game/Game.cpp Game/NewPlayer.cpp -o test
 
-a.out: Game.cpp NewPlayer.h NewPlayer.cpp Grid.h Battleship.h
-	   g++ -g Game.cpp NewPlayer.cpp
+a.out: Game/Game.cpp Game/NewPlayer.h Game/NewPlayer.cpp Game/Grid.h Game/Battleship.h
+	   g++ -g Game/Game.cpp Game/NewPlayer.cpp
