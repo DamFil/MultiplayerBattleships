@@ -1,4 +1,7 @@
 .vscode
-test
-a.out
-legacy.txt
+Game/test
+Game/a.out
+Game/legacy.txt
+Game/OldPlayer/Player.cpp
+Game/OldPlayer/Player.h
+Server/ideas.txt

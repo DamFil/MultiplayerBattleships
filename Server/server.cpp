@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -8,12 +10,21 @@
 #include <cstring>
 #include <vector>
 #include <thread>
+#include "GameState.h"
 
 using namespace std;
+
+/*
+ *Protocol for sending and receiving packets:
+ *The sender always first sends the byte size of the message it is sending
+ *and then it sends the actual message
+ */
 
 #define MAX_PLAYERS 4
 #define MAX_SPECTATORS 10
 #define MAX_BACKLOG_SIZE 10
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~MAIN~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 int main(int argc, char *argv[])
 {
@@ -28,7 +39,9 @@ int main(int argc, char *argv[])
     else
         portnum = argv[1];
 
-    int num_players = 0; // keeps track of the number of connected players
+    vector<thread> player_thread_pool{};    // keeps track of all the active player threads
+    vector<thread> spectator_thread_pool{}; // keeps track of all the active spectator threads
+
     struct addrinfo condtns, *response;
     int status;             // for getaddrinfo
     int socketid;           // for the listening socket
@@ -89,15 +102,31 @@ int main(int argc, char *argv[])
 
     cout << "Awaiting connections..." << endl;
 
+    newconn_size = sizeof newconn;
     while (true)
     {
         // accepting connections - creating a new thread for each connection
-        newconn_size = sizeof newconn;
-        int newsock;
-        if ((newsock = accept(socketid, (struct sockaddr *)&newconn, &newconn_size)) < 0)
+        int newsock = accept(socketid, (struct sockaddr *)&newconn, &newconn_size);
+        if (newsock < 0)
         {
+            close(socketid);
             cerr << "Error accepting the connection: [" << errno << " ]" << endl;
             continue; // wait for another connection to accept
+        }
+
+        // TODO: create palyer objects and call their member function (playerInitThread)
+
+        if (num_players < MAX_PLAYERS)
+        {
+            m.lock();
+            ++num_players; // increments the number of players
+            m.unlock();
+            // thread t(player, newsock);
+        }
+        else
+        {
+            ++num_spectators;
+            // thread t(spectator, newsock);
         }
     }
 
