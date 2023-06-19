@@ -37,45 +37,48 @@ public:
     {
         if (!initialized)
         {
-            // first expecting a players name
-            this->bytes_rec = recv(this->sockfd, &header, sizeof(header), 0);
-
-            int name_len = ntohl(this->header); // converting to server byte ordering
-
-            // reading the actual name
-            char buf[name_len];
-            this->bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL);
-            if (!checkBytesRec())
-                return;
-
-            // loading the name into the objet variables
-            this->message_rec = buf;
-            this->name = buf;
-
-            // receiving confirmation for starting the game
-            char sg;
-            bytes_rec = recv(this->sockfd, &sg, sizeof(char), 0); // sizeof char == 1 byte
-            if (!checkBytesRec())
-                return;
-
-            if (sg == 'Y')
-                this->ready = true;
-            else
+            if (num_players >= 2) // you can only initialize if there are min 2 players
             {
-                cout << "Player: [ " << this->name << " ] kicked out for not wanting to play the game..." << endl;
-                close(sockfd);
-                m.lock();
-                --num_players;
-                m.unlock();
-                return;
+                // first expecting a players name
+                this->bytes_rec = recv(this->sockfd, &header, sizeof(header), 0);
+
+                int name_len = ntohl(this->header); // converting to server byte ordering
+
+                // reading the actual name
+                char buf[name_len];
+                this->bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL);
+                if (!checkBytesRec())
+                    return;
+
+                // loading the name into the objet variables
+                this->message_rec = buf;
+                this->name = buf;
+
+                // receiving confirmation for starting the game
+                char sg;
+                bytes_rec = recv(this->sockfd, &sg, sizeof(char), 0); // sizeof char == 1 byte
+                if (!checkBytesRec())
+                    return;
+
+                if (sg == 'Y')
+                    this->ready = true;
+                else
+                {
+                    cout << "Player: [ " << this->name << " ] kicked out for not wanting to play the game..." << endl;
+                    close(sockfd);
+                    m.lock();
+                    --num_players;
+                    m.unlock();
+                    return;
+                }
+
+                // Intilizing the ships
+                cout << "Getting " << this->name << "'s ship positions..." << endl;
+                if (!getAllShips())
+                    return;
+
+                this->initialized = true;
             }
-
-            // Intilizing the ships
-            cout << "Getting " << this->name << "'s ship positions..." << endl;
-            if (!getAllShips())
-                return;
-
-            this->initialized = true;
         }
 
         // this is where we start the attacking turns

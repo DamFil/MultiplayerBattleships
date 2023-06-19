@@ -11,6 +11,7 @@
 #include <vector>
 #include <thread>
 #include "GameState.h"
+#include "Player.h"
 
 using namespace std;
 
@@ -41,6 +42,7 @@ int main(int argc, char *argv[])
 
     vector<thread> player_thread_pool{};    // keeps track of all the active player threads
     vector<thread> spectator_thread_pool{}; // keeps track of all the active spectator threads
+    vector<Player *> active_players{};      // keeps track of states of all the currently active players
 
     struct addrinfo condtns, *response;
     int status;             // for getaddrinfo
@@ -49,18 +51,21 @@ int main(int argc, char *argv[])
     struct sockaddr_storage newconn;
     socklen_t newconn_size;
 
-    memset(&condtns, 0, sizeof(condtns));
+    memset(&condtns, 0, sizeof condtns);
     condtns.ai_family = AF_UNSPEC;     // both IPv4 and IPv6
     condtns.ai_socktype = SOCK_STREAM; // TCP
     condtns.ai_flags = AI_PASSIVE;     // fills in the IP for me - assign the address of the local host to the socket structures
 
     // response contains a linked list of structs that we will need later on
     // avoids the call to gethostbyname
-    if ((status = getaddrinfo(NULL, portnum.c_str(), &condtns, &response)) != 0)
+
+    status = getaddrinfo(NULL, portnum.c_str(), &condtns, &response);
+
+    if (status != 0)
     {
         cerr << "Error calling getaddrinfo: [ " << gai_strerror(status) << " ]" << endl;
         freeaddrinfo(response);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     // we need to walk through all of the response linked list to check for valid entries
@@ -84,11 +89,11 @@ int main(int argc, char *argv[])
         break;
     }
 
-    if (socketid < 0)
+    if (res == NULL)
     {
         cerr << "Could not create and/or bind the socket" << endl;
         freeaddrinfo(response);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     freeaddrinfo(response); // we do not need this anymore since we got the listening socket
@@ -97,7 +102,7 @@ int main(int argc, char *argv[])
     if (listen(socketid, MAX_BACKLOG_SIZE) < 0)
     {
         cerr << "Error on listening for incoming connections: [ " << errno << " ]" << endl;
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     cout << "Awaiting connections..." << endl;
@@ -114,14 +119,16 @@ int main(int argc, char *argv[])
             continue; // wait for another connection to accept
         }
 
-        // TODO: create palyer objects and call their member function (playerInitThread)
-
         if (num_players < MAX_PLAYERS)
         {
             m.lock();
             ++num_players; // increments the number of players
             m.unlock();
-            // thread t(player, newsock);
+
+            Player *p = new Player(newsock);
+            active_players.push_back(p);
+            thread t(&Player::playerInitThread, p);
+            player_thread_pool.push_back(t);
         }
         else
         {
