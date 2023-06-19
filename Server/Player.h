@@ -35,6 +35,21 @@ public:
 
     void playerInitThread()
     {
+        //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GETTING THE NAME OF THE PLAYER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        this->bytes_rec = recv(this->sockfd, &header, sizeof(header), 0);
+
+        int name_len = ntohl(this->header); // converting to server byte ordering
+
+        // reading the actual name
+        char buf[name_len];
+        this->bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL); // waiting for all the bytes
+        if (!checkBytesRec())
+            return;
+
+        // loading the name into the objet variables
+        this->message_rec = buf;
+        this->name = buf;
+
         if (!initialized)
         {
             if (num_players >= 2) // you can only initialize if there are min 2 players

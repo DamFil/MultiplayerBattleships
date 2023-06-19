@@ -39,9 +39,6 @@ int main(int argc, char *argv[])
     struct addrinfo condtns, *server, *ser; // server contains information about the server we are connecting to
     int status;                             // for getaddrinfo
     int socketid;                           // for the listening socket
-    vector<int> newsocks{};                 // for active sockets (1 for each thread)
-    struct sockaddr_storage newconn;
-    socklen_t newconn_size;
 
     memset(&condtns, 0, sizeof condtns);
     condtns.ai_family = AF_UNSPEC;     // both IPv4 and IPv6
@@ -88,5 +85,36 @@ int main(int argc, char *argv[])
 
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SENDING/RECEIVING TO/FROM THE CLIENT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    return 0;
+    // sending the name
+
+    // first sending the length of the name - HEADER
+    int name_len = name.length();
+    int net_name_len = htonl(name_len); // converting to network byte ordering
+    if (send(socketid, &net_name_len, sizeof(int), 0) < 0)
+    {
+        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
+        close(socketid);
+        return EXIT_FAILURE;
+    }
+
+    int total_bytes_sent = 0;
+    do
+    {
+        string rest_to_send = name.substr(total_bytes_sent); // takes the remaining, unsent part of the string
+        int len_rest = rest_to_send.length();
+
+        int bytes_sent = send(socketid, rest_to_send.c_str(), len_rest, 0);
+
+        if (bytes_sent < 0)
+        {
+            cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
+            close(socketid);
+            return EXIT_FAILURE;
+        }
+
+        total_bytes_sent += bytes_sent;
+
+    } while (total_bytes_sent != name_len);
+
+        return 0;
 }
