@@ -10,6 +10,7 @@
 #include <cstring>
 #include <vector>
 #include <thread>
+#include <bits/stdc++.h>
 #include "GameState.h"
 #include "Player.h"
 
@@ -21,6 +22,10 @@ using namespace std;
  *and then it sends the actual message
  */
 
+/*
+ * REPORTING SHOULD ALWAYS BE DONE FROM THE MAIN THREAD - WE DO NOT WANT DATA RACES FOR THE STD STREAM
+ */
+
 #define MAX_PLAYERS 4
 #define MAX_SPECTATORS 10
 #define MAX_BACKLOG_SIZE 10
@@ -29,6 +34,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    GameState gameinfo = GameState();
     // we get the portnum from the command line arguments
     string portnum;
 
@@ -40,9 +46,9 @@ int main(int argc, char *argv[])
     else
         portnum = argv[1];
 
+    vector<future<threadvalue>> init_values{};
     vector<thread> player_thread_pool{};    // keeps track of all the active player threads
     vector<thread> spectator_thread_pool{}; // keeps track of all the active spectator threads
-    vector<Player *> active_players{};      // keeps track of states of all the currently active players
 
     struct addrinfo condtns, *response;
     int status;             // for getaddrinfo
@@ -108,34 +114,66 @@ int main(int argc, char *argv[])
     cout << "Awaiting connections..." << endl;
 
     newconn_size = sizeof newconn;
-    while (true)
+    while (gameinfo.getNumPlayers() < MAX_PLAYERS)
     {
         // accepting connections - creating a new thread for each connection
         int newsock = accept(socketid, (struct sockaddr *)&newconn, &newconn_size);
-        if (newsock < 0)
+        if (newsock < 0) // handling local errors
         {
             close(socketid);
             cerr << "Error accepting the connection: [" << errno << " ]" << endl;
             continue; // wait for another connection to accept
         }
 
-        if (num_players < MAX_PLAYERS)
-        {
-            m.lock();
-            ++num_players; // increments the number of players
-            m.unlock();
+        cout << "A new player connected!" << endl;
 
-            Player *p = new Player(newsock);
-            active_players.push_back(p);
-            thread t(&Player::playerInitThread, p);
-            player_thread_pool.push_back(t);
-        }
-        else
+        // creating the player object
+        Player *p = new Player(newsock, &gameinfo);
+        gameinfo.addPlayer(p);
+
+        // only create threads if there are 2 or more players
+        if (gameinfo.getNumPlayers() >= 2)
         {
-            ++num_spectators;
-            // thread t(spectator, newsock);
+            // restart all the threads since
+            vector<Player *> players = gameinfo.getPlayers();
+            for (auto player : players)
+            {
+                future<threadvalue> fu = async(&Player::getNameAndStart, player);
+                init_values.push_back(fu);
+            }
+
+            // waiting for all the threads to finishn and testing to see if any failed
+            for (int i = 0; i < init_values.size(); i++)
+            {
+                threadvalue response = init_values.at(i).get();
+                if (response == threadvalue::localerr)
+                {
+                    cout << "Problems encountered when receiving bytes..." << endl;
+                    players.at(i)->closeSocket();
+                    gameinfo.removePlayer(players.at(i));
+                    delete players.at(i);
+                }
+                else if (response == threadvalue::localerr)
+                {
+                    cout << "Player [ " << players.at(i)->getName() << " ] disconnected..." << endl;
+                    players.at(i)->closeSocket();
+                    gameinfo.removePlayer(players.at(i));
+                    delete players.at(i);
+                }
+            }
+
+            if (gameinfo.getStartGame())
+                break;
+            else
+                continue;
         }
     }
+
+    /*
+    This part of the main thread signals 2 scenarios:
+    1) All the players (<4) agreed to a yes and the game started
+    2) 4 players connected to the server and the game started automatically
+    */
 
     return 0;
 }
