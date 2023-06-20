@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    // making sure that all of the bytes are sent
     int total_bytes_sent = 0;
     do
     {
@@ -116,5 +117,27 @@ int main(int argc, char *argv[])
 
     } while (total_bytes_sent != name_len);
 
-        return 0;
+    // sending whether you want to start the game or not
+    string res;
+    cout << "Do you want to start the game? (Y/Q)" << endl;
+    cin >> res;
+    while (res != "Y" && res != "Q")
+    {
+        cout << "You can only answer with 'Y' or 'N'" << endl;
+        cin >> res;
+    }
+
+    int bytes_sent = send(socketid, res.c_str(), 1, 0);
+
+    int tmp;
+    int bytes_rec = recv(socketid, &tmp, sizeof(int), 0);
+    int header = ntohl(tmp);
+
+    char buf[header];
+    bytes_rec = recv(socketid, buf, header, MSG_WAITALL);
+
+    string message = buf;
+    cout << message << endl;
+
+    return 0;
 }

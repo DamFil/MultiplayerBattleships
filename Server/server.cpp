@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
                 }
             }
 
-            if (gameinfo.getStartGame())
+            if (gameinfo.getStartGame() && gameinfo.getNumPlayers() >= 2)
                 break;
             else
                 continue;

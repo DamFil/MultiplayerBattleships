@@ -38,6 +38,7 @@ public:
     //* gets the name and asks to start the game
     threadvalue getNameAndStart()
     {
+        //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GETTING THE NAME OF THE PLAYER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // we only initialize the name if it was not initialized
         if (name == "")
         {
@@ -66,83 +67,29 @@ public:
         {
             gameinfo->changeStartGame(true);
         }
-        else if (sg == 'N')
+        else if (sg == 'Q')
         {
-            gameinfo->changeStartGame(false);
+            return threadvalue::disconnected;
         }
+
+        string pre_game = "Starting...";
+        tmp = pre_game.length();
+        header = htonl(tmp);
+        bytes_sent = send(this->sockfd, &header, sizeof(int), 0);
+
+        bytes_sent = send(this->sockfd, pre_game.c_str(), header, 0);
 
         return threadvalue::good;
     }
 
     void playerInitThread()
     {
-        //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GETTING THE NAME OF THE PLAYER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        this->bytes_rec = recv(this->sockfd, &header, sizeof(header), 0);
-
-        int name_len = ntohl(this->header); // converting to server byte ordering
-
-        // reading the actual name
-        char buf[name_len];
-        this->bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL); // waiting for all the bytes
-        if (!checkBytesRec())
+        // Intilizing the ships
+        cout << "Getting " << this->name << "'s ship positions..." << endl;
+        if (!getAllShips())
             return;
 
-        // loading the name into the objet variables
-        this->message_rec = buf;
-        this->name = buf;
-
-        this->message_send = "Hello, " + this->name + "!";
-        // TODO - send this message
-
-        //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SENDING A SIGNAL WHEN THERE ARE 2 OR MORE PLAYERS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        unique_lock<mutex> lock(m);
-        cv.wait(lock, []
-                { num_players >= 2; });
-
-        char sg;
-        bytes_rec = recv(this->sockfd, &sg, sizeof(char), 0); // sizeof char == 1 byte
-        if (!checkBytesRec())
-            return;
-
-        if (sg == 'Y')
-            this->ready = true;
-
-        unique_lock<mutex> lock(m);
-        cv.wait(lock, checkStartGame); // waits until start_game is true
-
-        if (!initialized)
-        {
-            if (num_players >= 2) // you can only initialize if there are min 2 players
-            {
-                // receiving confirmation for starting the game
-                char sg;
-                bytes_rec = recv(this->sockfd, &sg, sizeof(char), 0); // sizeof char == 1 byte
-                if (!checkBytesRec())
-                    return;
-
-                if (sg == 'Y')
-                    this->ready = true;
-                else
-                {
-                    cout << "Player: [ " << this->name << " ] kicked out for not wanting to play the game..." << endl;
-                    close(sockfd);
-                    m.lock();
-                    --num_players;
-                    m.unlock();
-                    return;
-                }
-
-                // Intilizing the ships
-                cout << "Getting " << this->name << "'s ship positions..." << endl;
-                if (!getAllShips())
-                    return;
-
-                this->initialized = true;
-            }
-        }
-
-        // this is where we start the attacking turns
+        this->initialized = true;
     }
 
     void closeSocket()
@@ -171,20 +118,6 @@ private:
         default:
             return threadvalue::good;
         }
-    }
-
-    threadvalue checkBytesSent()
-    {
-        if (this->bytes_sent < 0)
-        {
-            close(sockfd);
-            m.lock();
-            --num_players;
-            m.unlock();
-            return false;
-        }
-
-        return true;
     }
 
     bool getShip()
@@ -233,22 +166,5 @@ private:
             return false;
 
         return true;
-    }
-
-    bool checkNumPlayers()
-    {
-        if (num_players >= 2)
-            return true;
-
-        return false;
-    }
-
-    bool checkStartGame()
-    {
-        bool final_ready = true;
-        for (int i = 0; i < active_players.size(); i++)
-        {
-            final_ready = final_ready && active_players[i].ready;
-        }
-    }
+    };
 };
