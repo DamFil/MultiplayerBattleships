@@ -31,8 +31,12 @@ int main(int argc, char *argv[])
     }
 
     string ip = iport.substr(0, poscol);
-    string portnum = iport.substr(poscol);
+    string portnum = iport.substr(poscol + 1);
     string name = argv[2];
+
+    cout << "ip: [ " << ip << " ]" << endl;
+    cout << "port number: [ " << portnum << " ]" << endl;
+    cout << "name: [ " << name << " ]" << endl;
 
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SETTING UP THE CONNECTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
