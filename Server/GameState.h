@@ -1,17 +1,11 @@
+#pragma once
+
 #include <vector>
 #include <mutex>
 #include <condition_variable>
-#include <bits/stdc++.h>
 #include "Player.h"
 
 using namespace std;
-
-enum threadvalue
-{
-    disconnected,
-    localerr,
-    good
-};
 
 class GameState
 {
@@ -35,7 +29,15 @@ public:
     void removePlayer(Player *p)
     {
         lock_guard<mutex> l(this->m);
-        remove(active_players.begin(), active_players.end(), p);
+
+        int i;
+        for (i = 0; i < active_players.size(); i++)
+        {
+            if (active_players.at(i) == p)
+                break;
+        }
+
+        active_players.erase(active_players.begin() + i);
         --num_players;
     }
 

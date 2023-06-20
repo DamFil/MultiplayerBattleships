@@ -10,9 +10,8 @@
 #include <cstring>
 #include <vector>
 #include <thread>
-#include <bits/stdc++.h>
+#include <future>
 #include "GameState.h"
-#include "Player.h"
 
 using namespace std;
 
@@ -136,10 +135,11 @@ int main(int argc, char *argv[])
         {
             // restart all the threads since
             vector<Player *> players = gameinfo.getPlayers();
+            init_values.clear(); // resetting the vector of futures
             for (auto player : players)
             {
-                future<threadvalue> fu = async(&Player::getNameAndStart, player);
-                init_values.push_back(fu);
+                // future<threadvalue> fu = async(&Player::getNameAndStart, player);
+                init_values.push_back(async(&Player::getNameAndStart, player)); //! I CANNOT COPY FUTURES
             }
 
             // waiting for all the threads to finishn and testing to see if any failed
