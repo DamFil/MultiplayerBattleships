@@ -64,25 +64,29 @@ void Player::addShip()
 {
     // aircraft carrier - col, row, orient
     // sets the attribute status to the return value of checkBytesRec() - which is then handled in the main thread code
-    bytes_rec = recv(this->sockfd, &tmp, sizeof(int), MSG_WAITALL);
+    // getting the col
+    char col;
+    bytes_rec = recv(this->sockfd, &col, 1, MSG_WAITALL);
     status = checkBytesRec();
     if (status != threadvalue::good)
         return;
-    int col = ntohl(tmp);
 
+    // getting the row
     bytes_rec = recv(this->sockfd, &tmp, sizeof(int), MSG_WAITALL);
     status = checkBytesRec();
     if (status != threadvalue::good)
         return;
     int row = ntohl(tmp);
 
+    // getting the orientation
     char orient;
     bytes_rec = recv(this->sockfd, &orient, 1, MSG_WAITALL);
     status = checkBytesRec();
     if (status != threadvalue::good)
         return;
 
-    tuple<int, int, char> pos(col, row, orient);
+    // creating the ship tuple
+    tuple<char, int, char> pos(col, row, orient);
     this->ship_pos.push_back(pos);
 }
 

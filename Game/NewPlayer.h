@@ -17,19 +17,14 @@ class NewPlayer
 {
 public:
     Grid *grid;
-    string name;
 
-    NewPlayer() : grid(new Grid())
-    {
-        cout << "Enter the name of your character" << endl;
-        cin >> name;
-    }
+    NewPlayer() : grid(new Grid()) {}
     ~NewPlayer()
     {
         delete grid;
     }
 
-    void newShip(ShipType t, char col, int row, char orientation);
+    bool newShip(ShipType t, char col, int row, char orientation);
     void showMap();
     void showAttemptsMap();
     bool attack(NewPlayer *player, char col, int row);

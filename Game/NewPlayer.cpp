@@ -5,54 +5,64 @@ inline bool NewPlayer::checkBound(char col, int row, int length, char orientatio
     if ((orientation == 'H' && col > ('J' - length + 1)) || (orientation == 'V' && row < length))
     {
         cout << "The ship does not fit on the grid!" << endl;
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     return true;
 }
 
-void NewPlayer::newShip(ShipType t, char col, int row, char orientation)
+bool NewPlayer::newShip(ShipType t, char col, int row, char orientation)
 {
     switch (t)
     {
     case A:
     {
-        checkBound(col, row, 5, orientation);
+        if (!checkBound(col, row, 5, orientation))
+            return false;
         AircraftCarrier *ac = new AircraftCarrier(orientation, row - 1, ctoi[col]);
-        grid->addShip(ac);
+        if (!grid->addShip(ac))
+            return false;
         break;
     }
     case B:
     {
-        checkBound(col, row, 4, orientation);
+        if (!checkBound(col, row, 4, orientation))
+            return false;
         Battleship *bs = new Battleship(orientation, row - 1, ctoi[col]);
-        grid->addShip(bs);
+        if (!grid->addShip(bs))
+            return false;
         break;
     }
     case C:
     {
-        checkBound(col, row, 3, orientation);
+        if (!checkBound(col, row, 3, orientation))
+            return false;
         Cruiser *cs = new Cruiser(orientation, row - 1, ctoi[col]);
-        grid->addShip(cs);
+        if (!grid->addShip(cs))
+            return false;
         break;
     }
     case D:
     {
-        checkBound(col, row, 2, orientation);
+        if (!checkBound(col, row, 2, orientation))
+            return false;
         Destroyer *ds = new Destroyer(orientation, row - 1, ctoi[col]);
-        grid->addShip(ds);
+        if (!grid->addShip(ds))
+            return false;
         break;
     }
     case S:
     {
-        checkBound(col, row, 1, orientation);
+        if (!checkBound(col, row, 1, orientation))
+            return false;
         Submarine *sm = new Submarine(orientation, row - 1, ctoi[col]);
-        grid->addShip(sm);
+        if (!grid->addShip(sm))
+            return false;
         break;
     }
     }
 
-    return;
+    return true;
 }
 
 void NewPlayer::showMap()

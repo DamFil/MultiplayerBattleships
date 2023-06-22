@@ -34,8 +34,8 @@ private:
     int tmp, header;     // for receiving integers and size of next message respectively
     int bytes_sent, bytes_rec;
     threadvalue status;
-    vector<tuple<int, int, char>> ship_pos{}; // keeps track of the ship positions of the player (including the ship oritentations)
-    vector<pair<int, int>> attemps{};         // keeps track of the attempts other players made on destroying the ships
+    vector<tuple<char, int, char>> ship_pos{}; // keeps track of the ship positions of the player (including the ship oritentations)
+    vector<pair<int, int>> attemps{};          // keeps track of the attempts other players made on destroying the ships
 
 public:
     bool ready;
