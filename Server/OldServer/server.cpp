@@ -130,22 +130,24 @@ int main(int argc, char *argv[])
         Player *p = new Player(newsock, &gameinfo);
         gameinfo.addPlayer(p);
 
+        cout << "Number of players currently in the game: [ " << gameinfo.getNumPlayers() << " ]" << endl;
+
         // only create threads if there are 2 or more players
         if (gameinfo.getNumPlayers() >= 2)
         {
-            // restart all the threads since
+            // restart all the threads since we waited for them to finish in the previous iteration
             vector<Player *> players = gameinfo.getPlayers();
             init_values.clear(); // resetting the vector of futures
             for (auto player : players)
             {
                 // future<threadvalue> fu = async(&Player::getNameAndStart, player);
-                init_values.push_back(async(&Player::getNameAndStart, player)); //! I CANNOT COPY FUTURES
+                init_values.push_back(async(&Player::getNameAndStart, player));
             }
 
-            // waiting for all the threads to finishn and testing to see if any failed
+            // waiting for all the threads to finish and testing to see if any failed
             for (int i = 0; i < init_values.size(); i++)
             {
-                threadvalue response = init_values.at(i).get();
+                threadvalue response = init_values.at(i).get(); //* this should block
                 if (response == threadvalue::localerr)
                 {
                     cout << "Problems encountered when receiving bytes..." << endl;

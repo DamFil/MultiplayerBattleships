@@ -12,6 +12,23 @@
 
 using namespace std;
 
+bool parseCell(string cell, char *col, int *row)
+{
+    if (cell.length() < 2 || cell.length() > 3)
+        return false;
+    if (!(isalpha(cell.at(0))) && (cell.at(0) < 'A' || cell.at(0) > 'J'))
+        return false;
+    if (!isdigit(cell.at(1)))
+        return false;
+    if (cell.length() == 3 && !isdigit(cell.at(2)))
+        return false;
+
+    *col = cell.at(0);
+    *row = stoi(cell.substr(1));
+
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PARSING COMMAND LINE ARGUMENTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,7 +106,9 @@ int main(int argc, char *argv[])
 
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SENDING/RECEIVING TO/FROM THE CLIENT ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    // sending the name
+    // waiting for a receive signal
+    char sg;
+    int bytes_rec = recv(socketid, &sg, 1, MSG_WAITALL); // just blocks until the server thread starts
 
     // first sending the length of the name - HEADER
     int name_len = name.length();
@@ -127,21 +146,23 @@ int main(int argc, char *argv[])
     cin >> res;
     while (res != "Y" && res != "Q")
     {
-        cout << "You can only answer with 'Y' or 'N'" << endl;
+        cout << "You can only answer with 'Y' or 'Q'" << endl;
         cin >> res;
+    }
+
+    if (res == "Q")
+    {
+        close(socketid);
+        return EXIT_SUCCESS;
     }
 
     int bytes_sent = send(socketid, res.c_str(), 1, 0);
 
-    int tmp;
-    int bytes_rec = recv(socketid, &tmp, sizeof(int), 0);
-    int header = ntohl(tmp);
+    cout << "Time to set the positions of your ships!" << endl;
 
-    char buf[header];
-    bytes_rec = recv(socketid, buf, header, MSG_WAITALL);
-
-    string message = buf;
-    cout << message << endl;
+    string ac;
+    cout << "Please enter the starting position for the AirCraft Carrier:" << endl;
+    cin >> ac;
 
     return 0;
 }

@@ -14,10 +14,10 @@ private:
     int num_players;
     int num_spectators;
     vector<Player *> active_players{};
-    bool start_game;
+    bool start_turns;
 
 public:
-    GameState() : num_players(0), num_spectators(0), start_game(true) {}
+    GameState() : num_players(0), num_spectators(0), start_turns(false) {}
 
     void addPlayer(Player *p)
     {
@@ -37,21 +37,23 @@ public:
                 break;
         }
 
+        p->closeSocket();
         active_players.erase(active_players.begin() + i);
+        delete p;
         --num_players;
     }
 
-    // void incPlayers(int amnt = 1)
-    //{
-    //     lock_guard<mutex> l(this->m);
-    //     num_players += amnt;
-    // }
-    //
-    // void decPlayers()
-    //{
-    //    lock_guard<mutex> l(this->m);
-    //    --num_players;
-    //}
+    void incPlayers()
+    {
+        lock_guard<mutex> l(this->m);
+        ++num_players;
+    }
+
+    void decPlayers()
+    {
+        lock_guard<mutex> l(this->m);
+        --num_players;
+    }
 
     int getNumPlayers()
     {
@@ -62,14 +64,13 @@ public:
     bool getStartGame()
     {
         lock_guard<mutex> l(this->m);
-        return this->start_game;
-    }
+        bool ans = true;
+        for (int i = 0; i < active_players.size(); i++)
+        {
+            ans &= active_players[i]->ready;
+        }
 
-    void changeStartGame(bool playerchoice)
-    {
-        lock_guard<mutex> l(this->m);
-        this->start_game = true;
-        this->start_game &= playerchoice;
+        return ans;
     }
 
     vector<Player *> getPlayers()
