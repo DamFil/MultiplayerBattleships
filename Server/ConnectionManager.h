@@ -29,7 +29,9 @@ enum Output
 class ConnManager
 {
 private:
+    threadvalue status;
     string portnum;
+    vector<thread> waiting_for_dc{};
     vector<future<threadvalue>> futures{};
     struct addrinfo condtns;
     int socketid; // for the listening socket

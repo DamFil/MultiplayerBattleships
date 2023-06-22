@@ -76,8 +76,18 @@ Output ConnManager::acceptConnections()
         gameinfo->addPlayer(p);
 
         futures.push_back(async(launch::async, &Player::getNameAndStart, p)); // starts a new player's thread
-        thread t(waitForDisconnect, futures.back());                          // this thread handles disconnects
+        thread t(waitForDisconnect, ref(futures.back()), p);                  // this thread handles disconnects
+        waiting_for_dc.push_back(t);
     }
+
+    for (int i = 0; i < waiting_for_dc.size(); i++)
+    {
+        waiting_for_dc[i].join();
+        if (this->status != good)
+            return failure;
+    }
+
+    return success;
 }
 
 void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
@@ -85,9 +95,14 @@ void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
     threadvalue response = fu.get();
     if (response == localerr || response == disconnected)
     {
+        this->status = response;
         cout << "Player: [ " << p->getName() << " ] disconnected..." << endl;
         gameinfo->removePlayer(p);
     }
+
+    // we only care about the bad terminations
+    if (this->status != localerr && this->status != disconnected)
+        this->status = good;
 
     return;
 }
