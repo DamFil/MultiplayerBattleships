@@ -71,13 +71,13 @@ Output ConnManager::acceptConnections()
     {
         socklen_t newconn_size = sizeof newconn;
         int newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
+        cout << "A player connected..." << endl;
 
         Player *p = new Player(newsock, this->gameinfo);
         gameinfo->addPlayer(p);
 
-        futures.push_back(async(launch::async, &Player::getNameAndStart, p)); // starts a new player's thread
-        thread t(waitForDisconnect, ref(futures.back()), p);                  // this thread handles disconnects
-        waiting_for_dc.push_back(t);
+        futures.push_back(async(launch::async, &Player::getNameAndStart, p));                            // starts a new player's thread
+        waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread
     }
 
     for (int i = 0; i < waiting_for_dc.size(); i++)

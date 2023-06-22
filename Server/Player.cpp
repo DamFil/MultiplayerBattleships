@@ -17,31 +17,32 @@ threadvalue Player::getNameAndStart()
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GETTING THE NAME AND GAME START CONFIRMATION OF THE PLAYER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // client waits for this signal to start sending info
     char st = 's';
-    bytes_sent = send(this->sockfd, &st, 1, 0);
-    threadvalue res = checkBytesRec();
-    if (res != threadvalue::good)
-        return res;
+    bytes_sent = send(this->sockfd, &st, 1, 0); //! - THIS CAUSES A PROBLEM
+    if (bytes_sent < 0)
+        return localerr;
 
     // getting the header
     bytes_rec = recv(this->sockfd, &header, sizeof(header), 0);
     int name_len = ntohl(this->header); // converting to server byte ordering
 
-    // reading the actual name
+    //! reading the actual name - doesnt seem to work
     char buf[name_len];
     bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL); // waiting for all the bytes
-    res = checkBytesRec();
+    threadvalue res = checkBytesRec();
     if (res != threadvalue::good)
         return res;
 
     this->name = buf;
 
-    // getting the answer for starting the game
+    //! getting the answer for starting the game - this receive starts receiving the name
     char sg;
     bytes_rec = recv(this->sockfd, &sg, sizeof(char), MSG_WAITALL); // sizeof char == 1 byte
     res = checkBytesRec();
     if (res != threadvalue::good)
         return res;
 
+    if (sg != 'Y')
+        return localerr;
     // only Y can be sent since the client disconnects on Q - call to recv returns 0
 
     // Initilizing the ships
@@ -58,6 +59,8 @@ threadvalue Player::getNameAndStart()
     {
         this_thread::sleep_for(chrono::milliseconds(10));
     }
+
+    return good;
 }
 
 void Player::addShip()

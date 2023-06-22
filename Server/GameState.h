@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <mutex>
-#include <condition_variable>
 #include "Player.h"
 
 using namespace std;
@@ -30,15 +29,44 @@ public:
     {
         lock_guard<mutex> l(this->m);
 
+        if (p == nullptr)
+            return;
+
         int i;
+        bool found = false;
         for (i = 0; i < active_players.size(); i++)
         {
             if (active_players.at(i) == p)
+            {
+                found = true;
                 break;
+            }
         }
+
+        if (!found)
+            return;
 
         p->closeSocket();
         active_players.erase(active_players.begin() + i);
+        delete p;
+        --num_players;
+    }
+
+    void removePlayer(int player_pos)
+    {
+        lock_guard<mutex> l(this->m);
+        Player *p;
+        try
+        {
+            p = this->active_players.at(player_pos);
+        }
+        catch (std::out_of_range)
+        {
+            return;
+        }
+
+        p->closeSocket();
+        active_players.erase(active_players.begin() + player_pos);
         delete p;
         --num_players;
     }

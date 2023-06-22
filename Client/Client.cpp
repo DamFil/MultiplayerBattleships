@@ -11,7 +11,13 @@ clientvalue Client::initPlayer()
 {
     // waiting for a receive signal - blocks until the thread sends it something
     char sg;
-    int bytes_rec = recv(socketid, &sg, 1, MSG_WAITALL);
+    int bytes_rec = recv(socketid, &sg, 1, 0);
+    if (bytes_rec < 0)
+    {
+        cout << "Error communcating witht the server: [ " << errno << " ]" << endl;
+        close(socketid);
+        return clientvalue::localerr;
+    }
 
     // first sending the length of the name - HEADER
     int name_len = name.length();
@@ -24,9 +30,12 @@ clientvalue Client::initPlayer()
     }
 
     // sending the actual name
-    sendMessage(this->name);
-    if (this->status != good)
-        return this->status;
+    const char *c_name = this->name.c_str();
+    if (send(socketid, c_name, this->name.length(), 0) < 0)
+        return localerr;
+    // sendMessage(this->name); //! THIS FAILS
+    // if (this->status != good)
+    //    return this->status;
 
     // prompting the user to start the game
     string res;
@@ -94,6 +103,7 @@ void Client::sendMessage(string message)
         total_bytes_sent += bytes_sent;
 
     } while (total_bytes_sent != msg_len);
+    this->status = good;
 }
 
 bool Client::parseCell(string cell, char *col, int *row)
@@ -154,7 +164,7 @@ void Client::initAndSendShip(ShipType t)
 
         cout << "Please enter the orientation (H/V)" << endl;
         cin >> orient;
-        while (orient != 'H' || orient != 'V')
+        while (orient != 'H' && orient != 'V')
         {
             cout << "You can only answer with H or V" << endl;
             cin >> orient;
