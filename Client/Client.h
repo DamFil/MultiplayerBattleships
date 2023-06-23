@@ -35,11 +35,14 @@ public:
     Client(int socketid, string name);
     ~Client();
 
+    bool addShipLocal(ShipType t, char col, int row, char orientation);
     clientvalue initPlayer();
+    clientvalue sendShip(char col, int row, char orientation);
+    clientvalue initAllShips();
+    clientvalue attack();
 
 private:
     void sendMessage(string message);
     bool parseCell(string cell, char *col, int *row);
-    void initAndSendShip(ShipType t);
-    void initSendAllShips();
+    void initShip(ShipType t, char *col, int *row, char *orientation);
 };

@@ -1,6 +1,11 @@
 #include "ConnManager.h"
 
-ConnManager::ConnManager(string ip, string portnum, string name) : ip(ip), portnum(portnum), name(name) {}
+ConnManager::ConnManager(string ip, string portnum) : ip(ip), portnum(portnum) {}
+
+ConnManager::~ConnManager()
+{
+    closeSocket();
+}
 
 int ConnManager::setupAndConnect()
 {
@@ -14,7 +19,7 @@ int ConnManager::setupAndConnect()
     {
         cerr << "Error calling getaddrinfo: [ " << gai_strerror(status) << " ]" << endl;
         freeaddrinfo(server);
-        return EXIT_FAILURE;
+        return -1;
     }
 
     auto ser = server;
@@ -40,36 +45,22 @@ int ConnManager::setupAndConnect()
     {
         cerr << "Could not establish connection between the client and the server" << endl;
         freeaddrinfo(server);
-        return EXIT_FAILURE;
+        return -1;
     }
 
     freeaddrinfo(server);
 
     cout << "Connected to server..." << endl;
 
-    this->client = new Client(this->socketid, this->name);
-    clientvalue rtrn = client->initPlayer();
-    switch (rtrn)
-    {
-    case quit:
-        cout << "You have quit the game!" << endl;
-        close(socketid);
-        delete client;
-        return EXIT_FAILURE;
-    case localerr:
-        cout << "Error communcating with the server: [ " << errno << " ]" << endl;
-        close(socketid);
-        delete client;
-        return EXIT_FAILURE;
-    case disconnected:
-        cout << "You have disconnected from the server..." << endl;
-        close(socketid);
-        delete client;
-        return EXIT_FAILURE;
-    }
+    return 0;
+}
 
-    cout << "You finished the game!" << endl;
-    close(socketid);
-    delete client;
-    return EXIT_SUCCESS;
+int ConnManager::getSocket()
+{
+    return this->socketid;
+}
+
+void ConnManager::closeSocket()
+{
+    close(this->socketid);
 }

@@ -36,10 +36,9 @@ private:
     threadvalue status;
     vector<tuple<char, int, char>> ship_pos{}; // keeps track of the ship positions of the player (including the ship oritentations)
     vector<pair<int, int>> attemps{};          // keeps track of the attempts other players made on destroying the ships
-
-public:
     bool ready;
 
+public:
     Player(int sockfd, GameState *gameinfo);
 
     ~Player();
@@ -52,6 +51,8 @@ public:
     void closeSocket();
 
     string getName();
+
+    bool getReady();
 
 private:
     threadvalue checkBytesRec();

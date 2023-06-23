@@ -1,4 +1,5 @@
 #include "ConnManager.h"
+#include "Client.h"
 
 int main(int argc, char *argv[])
 {
@@ -45,23 +46,26 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    rtrn = client->initAllShips();
-    if (rtrn != good)
-    {
-        cout << "Error communcating with the client..." << endl;
-        connm->closeSocket();
-        delete client;
-        delete connm;
-        return EXIT_FAILURE;
-    }
+    client->addShipLocal(A, 'A', 1, 'H');
+    client->sendShip('A', 1, 'H');
 
-    rtrn = client->attack();
-    if (rtrn != good)
-    {
-        cout << "Error communcating with the client..." << endl;
-        connm->closeSocket();
-        delete client;
-        delete connm;
-        return EXIT_FAILURE;
-    }
+    client->addShipLocal(B, 'E', 3, 'H');
+    client->sendShip('E', 3, 'H');
+
+    client->addShipLocal(C, 'C', 9, 'V');
+    client->sendShip('C', 9, 'V');
+
+    client->addShipLocal(D, 'A', 10, 'H');
+    client->sendShip('A', 10, 'H');
+
+    client->addShipLocal(D, 'H', 6, 'V');
+    client->sendShip('H', 6, 'V');
+
+    client->addShipLocal(S, 'J', 10, 'V');
+    client->sendShip('J', 10, 'V');
+
+    client->addShipLocal(S, 'I', 9, 'V');
+    client->sendShip('I', 9, 'V');
+
+    return EXIT_SUCCESS;
 }

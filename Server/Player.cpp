@@ -67,6 +67,8 @@ threadvalue Player::getNameAndStart()
     if (bytes_sent < 0)
         return localerr;
 
+    //! there is a segmentation fault
+
     return good;
 }
 
@@ -110,6 +112,12 @@ string Player::getName()
 {
     lock_guard<mutex> l(this->player_mutex);
     return this->name;
+}
+
+bool Player::getReady()
+{
+    lock_guard<mutex> l(this->player_mutex);
+    return this->ready;
 }
 
 threadvalue Player::checkBytesRec()

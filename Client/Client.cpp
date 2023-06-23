@@ -14,8 +14,7 @@ clientvalue Client::initPlayer()
     int bytes_rec = recv(socketid, &sg, 1, 0);
     if (bytes_rec < 0)
     {
-        cout << "Error communcating witht the server: [ " << errno << " ]" << endl;
-        close(socketid);
+        cout << "Failed receiving the thread start signal..." << endl;
         return clientvalue::localerr;
     }
 
@@ -24,7 +23,7 @@ clientvalue Client::initPlayer()
     int net_name_len = htonl(name_len); // converting to network byte ordering
     if (send(socketid, &net_name_len, sizeof(int), 0) < 0)
     {
-        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
+        cerr << "Failed sending the name length..." << endl;
         close(socketid);
         return clientvalue::localerr;
     }
@@ -32,7 +31,10 @@ clientvalue Client::initPlayer()
     // sending the actual name
     const char *c_name = this->name.c_str();
     if (send(socketid, c_name, this->name.length(), 0) < 0)
+    {
+        cout << "Failed sending the name..." << endl;
         return localerr;
+    }
     // sendMessage(this->name); //! THIS FAILS
     // if (this->status != good)
     //    return this->status;
@@ -48,42 +50,15 @@ clientvalue Client::initPlayer()
     }
 
     if (res == "Q")
-    {
-        close(socketid);
         return quit;
-    }
 
     if (send(socketid, res.c_str(), 1, 0) < 0)
     {
-        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
-        close(socketid);
+        cerr << "Failed sending 'Y'..." << endl;
         return localerr;
     }
 
-    cout << "Time to set the positions of your ships!" << endl;
-
-    // setting up the ships locally and as well making sure that the ships are correct
-    initSendAllShips();
-    if (this->status != good)
-        return this->status;
-
-    char sa; // start attack flag
-    if (recv(socketid, &sa, 1, MSG_WAITALL) < 0)
-    {
-        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
-        close(socketid);
-        return localerr;
-    }
-
-    cout << "Alright time to start attacking!" << endl;
     return good;
-
-    /*
-    TODO: A while loop where the first statement is a receive statement
-        1) The client waits for the server to send it something - this denotes that
-           it is this client's turn to attack
-        2) Attacking logic
-    */
 }
 
 void Client::sendMessage(string message)
@@ -93,7 +68,7 @@ void Client::sendMessage(string message)
     int net_msg_len = htonl(msg_len); // converting to network byte ordering
     if (send(socketid, &net_msg_len, sizeof(int), 0) < 0)
     {
-        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
+        cerr << "Failed sending the message header..." << endl;
         close(socketid);
         this->status = localerr;
         return;
@@ -110,7 +85,7 @@ void Client::sendMessage(string message)
 
         if (bytes_sent < 0)
         {
-            cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
+            cerr << "Failed sending the message..." << endl;
             close(socketid);
             this->status = localerr;
             return;
@@ -143,11 +118,34 @@ bool Client::parseCell(string cell, char *col, int *row)
     return true;
 }
 
-void Client::initAndSendShip(ShipType t)
+clientvalue Client::sendShip(char col, int row, char orientation)
 {
-    char col;
-    int row;
-    char orient;
+    if (send(socketid, &col, 1, 0) < 0)
+    {
+        cerr << "Failed sending column char..." << endl;
+        return localerr;
+    }
+
+    // sending the row
+    int nrow = htonl(row);
+    if (send(socketid, &nrow, sizeof(int), 0) < 0)
+    {
+        cerr << "Failed sending row number..." << endl;
+        return localerr;
+    }
+
+    // sending the orientation
+    if (send(socketid, &orientation, 1, 0) < 0)
+    {
+        cerr << "Failed sending ship orientation..." << endl;
+        return localerr;
+    }
+
+    return good;
+}
+
+void Client::initShip(ShipType t, char *col, int *row, char *orientation)
+{
     string pos;
     int i = 0;
 
@@ -176,75 +174,56 @@ void Client::initAndSendShip(ShipType t)
         }
 
         cin >> pos;
-        while (!parseCell(pos, &col, &row))
+        while (!parseCell(pos, col, row))
         {
             cout << "The position of the ship has to be in the format COLROW where COL is the character of the colum (capital) and ROW is the number of the row" << endl;
             cin >> pos;
         }
 
         cout << "Please enter the orientation (H/V)" << endl;
-        cin >> orient;
-        while (orient != 'H' && orient != 'V')
+        cin >> *orientation;
+        while (*orientation != 'H' && *orientation != 'V')
         {
             cout << "You can only answer with H or V" << endl;
-            cin >> orient;
+            cin >> *orientation;
         }
         ++i;
-    } while (!p->newShip(t, col, row, orient)); // this while loop checks boundaries on the grid and collisions with other ships
-
-    // sending the ships - col, row, orient
-    // sending the col
-    if (send(socketid, &col, 1, 0) < 0)
-    {
-        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
-        close(socketid);
-        this->status = localerr;
-    }
-
-    // sending the row
-    int nrow = htonl(row);
-    if (send(socketid, &nrow, sizeof(int), 0) < 0)
-    {
-        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
-        close(socketid);
-        this->status = localerr;
-    }
-
-    // sending the orientation
-    if (send(socketid, &orient, 1, 0) < 0)
-    {
-        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
-        close(socketid);
-        this->status = localerr;
-    }
-
-    this->status = good;
-    return;
+    } while (!p->newShip(t, *col, *row, *orientation)); // this while loop checks boundaries on the grid and collisions with other ships and adds the ship locally
 }
 
-void Client::initSendAllShips()
+clientvalue Client::initAllShips()
 {
-    initAndSendShip(A);
-    if (status != good)
-        return;
-    initAndSendShip(B);
-    if (status != good)
-        return;
-    initAndSendShip(C);
-    if (status != good)
-        return;
-    initAndSendShip(D);
-    if (status != good)
-        return;
-    initAndSendShip(D);
-    if (status != good)
-        return;
-    initAndSendShip(S);
-    if (status != good)
-        return;
-    initAndSendShip(S);
-    if (status != good)
-        return;
+    char col;
+    int row;
+    char orientation;
 
-    this->status = good;
+    vector<ShipType> sts{A, B, C, D, D, S, S};
+
+    for (auto t : sts)
+    {
+        initShip(t, &col, &row, &orientation);
+        this->status = sendShip(col, row, orientation);
+        if (this->status != good)
+            break;
+    }
+
+    return this->status;
+}
+
+bool Client::addShipLocal(ShipType t, char col, int row, char orientation)
+{
+    p->newShip(t, col, row, orientation);
+}
+
+clientvalue Client::attack()
+{
+    char sg;
+    if (recv(this->socketid, &sg, 1, 0) < 0)
+    {
+        cout << "Wait to receive signal for starting the attack..." << endl;
+        return localerr;
+    }
+
+    cout << "Starting the attack!" << endl;
+    return good;
 }
