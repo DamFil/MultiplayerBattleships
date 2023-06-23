@@ -21,7 +21,10 @@ bool NewPlayer::newShip(ShipType t, char col, int row, char orientation)
             return false;
         AircraftCarrier *ac = new AircraftCarrier(orientation, row - 1, ctoi[col]);
         if (!grid->addShip(ac))
+        {
+            delete ac;
             return false;
+        }
         break;
     }
     case B:
@@ -30,7 +33,10 @@ bool NewPlayer::newShip(ShipType t, char col, int row, char orientation)
             return false;
         Battleship *bs = new Battleship(orientation, row - 1, ctoi[col]);
         if (!grid->addShip(bs))
+        {
+            delete bs;
             return false;
+        }
         break;
     }
     case C:
@@ -39,7 +45,10 @@ bool NewPlayer::newShip(ShipType t, char col, int row, char orientation)
             return false;
         Cruiser *cs = new Cruiser(orientation, row - 1, ctoi[col]);
         if (!grid->addShip(cs))
+        {
+            delete cs;
             return false;
+        }
         break;
     }
     case D:
@@ -48,7 +57,10 @@ bool NewPlayer::newShip(ShipType t, char col, int row, char orientation)
             return false;
         Destroyer *ds = new Destroyer(orientation, row - 1, ctoi[col]);
         if (!grid->addShip(ds))
+        {
+            delete ds;
             return false;
+        }
         break;
     }
     case S:
@@ -57,7 +69,10 @@ bool NewPlayer::newShip(ShipType t, char col, int row, char orientation)
             return false;
         Submarine *sm = new Submarine(orientation, row - 1, ctoi[col]);
         if (!grid->addShip(sm))
+        {
+            delete sm;
             return false;
+        }
         break;
     }
     }

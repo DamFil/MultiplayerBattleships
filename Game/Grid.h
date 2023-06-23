@@ -74,28 +74,34 @@ public:
 
     bool addShip(GeneralBattleship *bs)
     {
-        // checks for boats that would collide - returns false if the new boat would collide with an already added boat
+        // checks for boats that would collide - returns false if the new boat collides with an already added boat
         for (auto bts : battleships)
         {
             if (bs->orientation == 'H')
             {
-                if (bs->row == bts->row)
+                if (bts->orientation == 'H' && bts->row == bs->row)
                 {
                     for (int i = 0; i < bs->getLength(); i++)
                     {
                         if (bs->col + i >= bts->col && bs->col + i <= (bts->col + bts->getLength() - 1))
                         {
-                            cout << "The added ship collides with an already exisiting one!" << endl;
+                            cout << "The added ship collides with an already placed ship!" << endl;
                             return false;
                         }
                     }
+                }
+                else if (bts->orientation == 'V')
+                {
+                    cout << "The added ship collides with an already placed ship!" << endl;
+                    if ((bs->row <= bts->row) && (bs->row >= (bts->row - bts->getLength() + 1)) && ((bts->col >= bs->col) && (bts->col <= (bs->col + bs->getLength() - 1))))
+                        return false;
                 }
                 else
                     continue;
             }
             else if (bs->orientation == 'V')
             {
-                if (bs->col == bts->col)
+                if (bts->orientation == 'V' && bts->col == bs->col)
                 {
                     for (int i = 0; i < bs->getLength(); i++)
                     {
@@ -106,8 +112,12 @@ public:
                         }
                     }
                 }
-                else
-                    continue;
+                else if ((bts->row <= bs->row) && (bts->row >= (bs->row - bs->getLength() + 1)) && ((bs->col >= bts->col) && (bs->col <= (bts->col + bts->getLength() - 1))))
+                {
+                    cout << "The added ship collides with an already placed ship!" << endl;
+                    return false;
+                }
+                continue;
             }
         }
 
