@@ -25,16 +25,18 @@ threadvalue Player::getNameAndStart()
     bytes_rec = recv(this->sockfd, &header, sizeof(header), 0);
     int name_len = ntohl(this->header); // converting to server byte ordering
 
-    //! reading the actual name - doesnt seem to work
+    // reading the actual name
     char buf[name_len];
     bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL); // waiting for all the bytes
     threadvalue res = checkBytesRec();
     if (res != threadvalue::good)
         return res;
 
-    this->name = buf;
+    // have to do this because temp_name might contain some unwanted characters
+    string temp_name = buf;
+    this->name = temp_name.substr(0, name_len);
 
-    //! getting the answer for starting the game - this receive starts receiving the name
+    // getting the answer for starting the game
     char sg;
     bytes_rec = recv(this->sockfd, &sg, sizeof(char), MSG_WAITALL); // sizeof char == 1 byte
     res = checkBytesRec();
@@ -45,7 +47,7 @@ threadvalue Player::getNameAndStart()
         return localerr;
     // only Y can be sent since the client disconnects on Q - call to recv returns 0
 
-    // Initilizing the ships
+    //! Initilizing the ships - problem here
     for (int i = 0; i < MAX_SHIPS; i++)
     {
         addShip();
@@ -54,11 +56,16 @@ threadvalue Player::getNameAndStart()
     }
     this->ready = true;
 
-    // we have to wait for all the players to finish their initialization
-    while (!gameinfo->getStartGame())
+    // we have to wait for all the players to finish their initialization (there must be 2 or more players)
+    while (gameinfo->getNumPlayers() >= 2 && !gameinfo->getStartGame())
     {
         this_thread::sleep_for(chrono::milliseconds(10));
     }
+
+    char sa = 'A';
+    bytes_sent = send(sockfd, &sa, 1, 0);
+    if (bytes_sent < 0)
+        return localerr;
 
     return good;
 }
