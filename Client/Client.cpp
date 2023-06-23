@@ -67,7 +67,23 @@ clientvalue Client::initPlayer()
     if (this->status != good)
         return this->status;
 
+    char sa; // start attack flag
+    if (recv(socketid, &sa, 1, MSG_WAITALL) < 0)
+    {
+        cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
+        close(socketid);
+        return localerr;
+    }
+
+    cout << "Alright time to start attacking!" << endl;
     return good;
+
+    /*
+    TODO: A while loop where the first statement is a receive statement
+        1) The client waits for the server to send it something - this denotes that
+           it is this client's turn to attack
+        2) Attacking logic
+    */
 }
 
 void Client::sendMessage(string message)
@@ -170,7 +186,7 @@ void Client::initAndSendShip(ShipType t)
             cin >> orient;
         }
         ++i;
-    } while (!p->newShip(t, col, row, orient));
+    } while (!p->newShip(t, col, row, orient)); // this while loop checks boundaries on the grid and collisions with other ships
 
     // sending the ships - col, row, orient
     // sending the col
@@ -191,7 +207,7 @@ void Client::initAndSendShip(ShipType t)
     }
 
     // sending the orientation
-    if (send(socketid, &orient, 1, 0))
+    if (send(socketid, &orient, 1, 0) < 0)
     {
         cerr << "Error communcating with the server: [ " << errno << " ]" << endl;
         close(socketid);
