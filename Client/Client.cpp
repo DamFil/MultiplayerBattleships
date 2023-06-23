@@ -124,17 +124,21 @@ void Client::sendMessage(string message)
 
 bool Client::parseCell(string cell, char *col, int *row)
 {
-    if (cell.length() < 2 || cell.length() > 3)
+    int length = cell.length();
+    if (length < 2 || length > 3)
         return false;
     if (!(isalpha(cell.at(0))) && (cell.at(0) < 'A' || cell.at(0) > 'J'))
         return false;
     if (!isdigit(cell.at(1)))
         return false;
-    if (cell.length() == 3 && !isdigit(cell.at(2)))
+    if (length == 3 && !isdigit(cell.at(2)))
         return false;
 
     *col = cell.at(0);
     *row = stoi(cell.substr(1));
+
+    if (*row < 1 || *row > 10)
+        return false;
 
     return true;
 }
