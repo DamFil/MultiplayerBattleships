@@ -13,10 +13,10 @@ private:
     int num_players;
     int num_spectators;
     vector<Player *> active_players{};
-    bool start_turns;
+    bool stop_connect; // notifies the main thread to stop accepting further connections for players
 
 public:
-    GameState() : num_players(0), num_spectators(0), start_turns(false) {}
+    GameState() : num_players(0), num_spectators(0), stop_connect(false) {}
 
     void addPlayer(Player *p)
     {
@@ -47,8 +47,8 @@ public:
             return;
 
         p->closeSocket();
-        active_players.erase(active_players.begin() + i);
         delete p;
+        active_players.erase(active_players.begin() + i);
         --num_players;
     }
 
@@ -105,5 +105,17 @@ public:
     {
         lock_guard<mutex> l(this->m);
         return this->active_players;
+    }
+
+    void setStopConnect(bool value)
+    {
+        lock_guard<mutex> l(this->m);
+        this->stop_connect = value;
+    }
+
+    bool getStopConnect()
+    {
+        lock_guard<mutex> l(this->m);
+        return this->stop_connect;
     }
 };

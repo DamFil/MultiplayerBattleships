@@ -1,5 +1,5 @@
-#include "ConnManager.h"
-#include "Client.h"
+#include "../ConnManager.h"
+#include "../Client.h"
 
 int main(int argc, char *argv[])
 {
@@ -66,6 +66,8 @@ int main(int argc, char *argv[])
 
     client->addShipLocal(S, 'I', 9, 'V');
     client->sendShip('I', 9, 'V');
+
+    client->attack();
 
     return EXIT_SUCCESS;
 }

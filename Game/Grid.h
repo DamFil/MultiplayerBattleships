@@ -92,9 +92,11 @@ public:
                 }
                 else if (bts->orientation == 'V')
                 {
-                    cout << "The added ship collides with an already placed ship!" << endl;
                     if ((bs->row <= bts->row) && (bs->row >= (bts->row - bts->getLength() + 1)) && ((bts->col >= bs->col) && (bts->col <= (bs->col + bs->getLength() - 1))))
+                    {
+                        cout << "The added ship collides with an already placed ship!" << endl;
                         return false;
+                    }
                 }
                 else
                     continue;
@@ -117,7 +119,8 @@ public:
                     cout << "The added ship collides with an already placed ship!" << endl;
                     return false;
                 }
-                continue;
+                else
+                    continue;
             }
         }
 

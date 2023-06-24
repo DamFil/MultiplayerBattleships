@@ -19,10 +19,17 @@ threadvalue Player::getNameAndStart()
     char st = 's';
     bytes_sent = send(this->sockfd, &st, 1, 0); //! - THIS CAUSES A PROBLEM
     if (bytes_sent < 0)
+    {
+        cout << "Failed notifying the client to start..." << endl;
         return localerr;
+    }
 
     // getting the header
-    bytes_rec = recv(this->sockfd, &header, sizeof(header), 0);
+    if (recv(this->sockfd, &header, sizeof(header), 0) < 0)
+    {
+        cout << "Failed receiving the name length (HEADER)..." << endl;
+        return localerr;
+    }
     int name_len = ntohl(this->header); // converting to server byte ordering
 
     // reading the actual name
@@ -30,7 +37,10 @@ threadvalue Player::getNameAndStart()
     bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL); // waiting for all the bytes
     threadvalue res = checkBytesRec();
     if (res != threadvalue::good)
+    {
+        cout << "Failed receiving the name of the player..." << endl;
         return res;
+    }
 
     // have to do this because temp_name might contain some unwanted characters
     string temp_name = buf;
@@ -41,11 +51,13 @@ threadvalue Player::getNameAndStart()
     bytes_rec = recv(this->sockfd, &sg, sizeof(char), MSG_WAITALL); // sizeof char == 1 byte
     res = checkBytesRec();
     if (res != threadvalue::good)
+    {
+        cout << "Failed receiving start game response..." << endl;
         return res;
+    }
 
     if (sg != 'Y')
         return localerr;
-    // only Y can be sent since the client disconnects on Q - call to recv returns 0
 
     //! Initilizing the ships - problem here
     for (int i = 0; i < MAX_SHIPS; i++)
@@ -57,17 +69,22 @@ threadvalue Player::getNameAndStart()
     this->ready = true;
 
     // we have to wait for all the players to finish their initialization (there must be 2 or more players)
-    while (gameinfo->getNumPlayers() >= 2 && !gameinfo->getStartGame())
+    while (gameinfo->getNumPlayers() < 2 || !gameinfo->getStartGame())
     {
         this_thread::sleep_for(chrono::milliseconds(10));
     }
 
-    char sa = 'A';
-    bytes_sent = send(sockfd, &sa, 1, 0);
-    if (bytes_sent < 0)
-        return localerr;
+    gameinfo->setStopConnect(true);
 
-    //! there is a segmentation fault
+    // notifying the client that the attack phase is going to start
+    char sa = 'A';
+    if (send(sockfd, &sa, 1, 0) < 0)
+    {
+        cout << "Failed sending the attack start signal..." << endl;
+        return localerr;
+    }
+
+    cout << "Starting the attack phase..." << endl;
 
     return good;
 }

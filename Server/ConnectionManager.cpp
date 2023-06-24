@@ -67,7 +67,7 @@ Output ConnManager::setupAndListen()
 
 Output ConnManager::acceptConnections()
 {
-    while (gameinfo->getNumPlayers() < MAX_PLAYERS)
+    while (gameinfo->getNumPlayers() < MAX_PLAYERS && !gameinfo->getStopConnect())
     {
         socklen_t newconn_size = sizeof newconn;
         int newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
@@ -79,6 +79,8 @@ Output ConnManager::acceptConnections()
         futures.push_back(async(launch::async, &Player::getNameAndStart, p));                            // starts a new player's thread
         waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread
     }
+
+    // TODO: accept spectators
 
     for (int i = 0; i < waiting_for_dc.size(); i++)
     {

@@ -212,13 +212,13 @@ clientvalue Client::initAllShips()
 
 bool Client::addShipLocal(ShipType t, char col, int row, char orientation)
 {
-    p->newShip(t, col, row, orientation);
+    return p->newShip(t, col, row, orientation);
 }
 
 clientvalue Client::attack()
 {
     char sg;
-    if (recv(this->socketid, &sg, 1, 0) < 0)
+    if (recv(this->socketid, &sg, 1, MSG_WAITALL) < 0) //! this does not wait for some reason
     {
         cout << "Wait to receive signal for starting the attack..." << endl;
         return localerr;
