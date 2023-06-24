@@ -5,3 +5,7 @@ Game/legacy.txt
 Game/OldPlayer/Player.cpp
 Game/OldPlayer/Player.h
 Server/ideas.txt
+Client/a.out
+Client/Battleships
+Server/a.out
+Server/BattleshipsServer
