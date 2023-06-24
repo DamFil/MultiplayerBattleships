@@ -35,8 +35,8 @@ private:
     int bytes_sent, bytes_rec;
     threadvalue status;
     vector<tuple<char, int, char>> ship_pos{}; // keeps track of the ship positions of the player (including the ship oritentations)
-    vector<pair<int, int>> attemps{};          // keeps track of the attempts other players made on destroying the ships
-    bool ready;
+    vector<pair<char, int>> attemps{};         // keeps track of the attempts other players made on destroying the ships
+    bool ready, attack;                        // ready specifies that the ships are initialzied and attack specifies that it is this players turn to attack
 
 public:
     Player(int sockfd, GameState *gameinfo);
@@ -54,6 +54,14 @@ public:
 
     bool getReady();
 
+    bool getAttack();
+
+    void setAttack();
+
+    void addAttempt(pair<char, int>);
+
+    vector<pair<char, int>> getAttempts();
+
 private:
     threadvalue checkBytesRec();
 
@@ -62,4 +70,8 @@ private:
     bool getShip();
 
     bool getAllShips();
+
+    void sendAttempt(pair<char, int> at);
+
+    void sendAllAttempts(Player *p);
 };

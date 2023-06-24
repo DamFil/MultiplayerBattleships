@@ -45,6 +45,7 @@ public:
     Output setupAndListen();
     Output acceptConnections();
     void waitForDisconnect(future<threadvalue> &fu, Player *p);
+    void turnRegulator();
 
     /*
     TODO: you need a seperate thread for actively waiting for futures to handle disconnected players

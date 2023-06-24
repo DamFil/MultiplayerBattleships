@@ -108,3 +108,20 @@ void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
 
     return;
 }
+
+void ConnManager::turnRegulator()
+{
+    int i = 0;
+    while (true) // this will be replaced by some winning condition
+    {
+        // acquire lock
+        unique_lock<mutex> turn_locker(gameinfo->turn_lock);
+        Player *p = gameinfo->getPlayer(i);
+        if (p == nullptr)
+            continue;
+        p->setAttack();
+        turn_locker.unlock();
+        gameinfo->turn_notifier.notify_all();
+        i = (i + 1) % gameinfo->getNumPlayers();
+    }
+}
