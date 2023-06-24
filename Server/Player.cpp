@@ -4,7 +4,7 @@
 using namespace std;
 
 Player::Player(int sockfd, GameState *gameinfo) : sockfd(sockfd), gameinfo(gameinfo),
-                                                  status(threadvalue::good), name(""), ready(false) {}
+                                                  status(threadvalue::good), name(""), ready(false), lost(false) {}
 
 Player::~Player()
 {
@@ -91,6 +91,21 @@ threadvalue Player::getNameAndStart()
         unique_lock<mutex> turn_locker(gameinfo->turn_lock);
         gameinfo->turn_notifier.wait(turn_locker, getAttack); // this will only unlock when the turn selector thread finishes setting the turn
 
+        // first checks if it lost from the previous players attacks
+        if (checkIfLost())
+        {
+            this->lost = true;
+            turn_locker.unlock();
+            return good;
+        }
+
+        // terminates if it won
+        if (gameinfo->getNumPlayers() == 1)
+        {
+            turn_locker.unlock();
+            return good;
+        }
+
         char sa = 'A';
         if (send(sockfd, &sa, 1, 0) < 0)
         {
@@ -162,6 +177,10 @@ threadvalue Player::getNameAndStart()
             return res;
         }
         row = ntohl(tmp);
+
+        // we need to add that attempt to the player's list of attempts
+        pair<char, int> att(col, row);
+        to_attack->addAttempt(att);
 
         // at the end we unlock and set attack back to false
         turn_locker.unlock();
@@ -243,6 +262,12 @@ vector<pair<char, int>> Player::getAttempts()
     return this->attemps;
 }
 
+bool Player::getLost()
+{
+    lock_guard<mutex> l(this->player_mutex);
+    return this->lost;
+}
+
 threadvalue Player::checkBytesRec()
 {
     switch (this->bytes_rec)
@@ -302,4 +327,26 @@ void Player::sendAllAttempts(Player *p)
 
     this->status = good;
     return;
+}
+
+bool Player::checkIfLost()
+{
+    // creaing an array of just col and row positions
+    vector<pair<char, int>> just_pos{};
+    for (auto pos : ship_pos)
+    {
+        just_pos.push_back(pair<char, int>(get<0>(pos), get<1>(pos)));
+    }
+
+    int found = 0;
+    for (auto att : attemps)
+    {
+        if (find(just_pos.begin(), just_pos.end(), att) != just_pos.end())
+            ++found;
+    }
+
+    if (found == just_pos.size())
+        return true;
+
+    return false;
 }

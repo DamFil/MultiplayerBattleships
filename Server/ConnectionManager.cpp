@@ -80,6 +80,9 @@ Output ConnManager::acceptConnections()
         waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread
     }
 
+    // start the turnRegulator thread
+    thread turn_thread(&ConnManager::turnRegulator, this);
+
     // TODO: accept spectators
 
     for (int i = 0; i < waiting_for_dc.size(); i++)
@@ -106,13 +109,25 @@ void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
     if (this->status != localerr && this->status != disconnected)
         this->status = good;
 
+    if (p->getLost())
+    {
+        cout << "Player: [ " << p->getName() << " ] lost all his ships...He fought bravely" << endl;
+        gameinfo->removePlayer(p);
+    }
+    else
+    {
+        cout << "Player: [ " << p->getName() << " ] won!" << endl;
+        gameinfo->removePlayer(p);
+        // TODO run a procedure for clearing out all the spectators as the game finished
+    }
+
     return;
 }
 
 void ConnManager::turnRegulator()
 {
     int i = 0;
-    while (true) // this will be replaced by some winning condition
+    while (gameinfo->getNumPlayers() > 1) // this will be replaced by some winning condition
     {
         // acquire lock
         unique_lock<mutex> turn_locker(gameinfo->turn_lock);
@@ -121,7 +136,10 @@ void ConnManager::turnRegulator()
             continue;
         p->setAttack();
         turn_locker.unlock();
-        gameinfo->turn_notifier.notify_all();
+        gameinfo->turn_notifier.notify_all(); // notifies the right waiting player to start attacking
         i = (i + 1) % gameinfo->getNumPlayers();
     }
+
+    cout << "Congratulations " << gameinfo->getPlayer(0)->getName() << ", you won!" << endl;
+    return;
 }

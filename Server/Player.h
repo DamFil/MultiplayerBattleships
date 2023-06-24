@@ -10,6 +10,7 @@
 #include <mutex>
 #include <tuple>
 #include <thread>
+#include <algorithm>
 
 using namespace std;
 
@@ -36,7 +37,7 @@ private:
     threadvalue status;
     vector<tuple<char, int, char>> ship_pos{}; // keeps track of the ship positions of the player (including the ship oritentations)
     vector<pair<char, int>> attemps{};         // keeps track of the attempts other players made on destroying the ships
-    bool ready, attack;                        // ready specifies that the ships are initialzied and attack specifies that it is this players turn to attack
+    bool ready, attack, lost;                  // ready specifies that the ships are initialzied and attack specifies that it is this players turn to attack. Lost specifies if the player had lost
 
 public:
     Player(int sockfd, GameState *gameinfo);
@@ -58,9 +59,11 @@ public:
 
     void setAttack();
 
+    vector<pair<char, int>> getAttempts();
+
     void addAttempt(pair<char, int>);
 
-    vector<pair<char, int>> getAttempts();
+    bool getLost();
 
 private:
     threadvalue checkBytesRec();
@@ -74,4 +77,6 @@ private:
     void sendAttempt(pair<char, int> at);
 
     void sendAllAttempts(Player *p);
+
+    bool checkIfLost();
 };
