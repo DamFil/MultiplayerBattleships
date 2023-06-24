@@ -2,10 +2,12 @@
 Game/test
 Game/a.out
 Game/legacy.txt
-Game/OldPlayer/Player.cpp
-Game/OldPlayer/Player.h
+Game/OldPlayer/
 Server/ideas.txt
 Client/a.out
 Client/Battleships
+Client/BattleshipsTest
+Client/OldClient
+Server/OldServer
 Server/a.out
 Server/BattleshipsServer
