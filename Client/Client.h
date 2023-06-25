@@ -46,6 +46,7 @@ private:
     bool parseCell(string cell, char *col, int *row);
     void initShip(ShipType t, char *col, int *row, char *orientation);
     void recvAttempt(char *col, int *row, char *hm);
+    vector<tuple<char, int, char>> recvAllAttempts();
     void choosePlayerToAttack(string names);
     void sendStrike();
     bool hasSpace(string word);

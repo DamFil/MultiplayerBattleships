@@ -234,6 +234,13 @@ clientvalue Client::attack()
             return disconnected;
         }
 
+        // receiving the attempts accumulated over the other players' turns
+        vector<tuple<char, int, char>> my_attemps = recvAllAttempts();
+        if (this->status != good)
+            return this->status;
+
+        // TODO: set the above vector to my player's attempt vector
+
         cout << "Starting the attack!" << endl;
 
         // receiving the names length
@@ -272,37 +279,16 @@ clientvalue Client::attack()
             return this->status;
 
         // receiving the attempts of the player so that you can print it
-        bytes_rec = recv(socketid, &tmp, sizeof(int), 0);
-        if (bytes_rec < 0)
-        {
-            cout << "Local error when receiving the length of the grid of the player you want to attack..." << endl;
-            return localerr;
-        }
-        else if (bytes_rec == 0)
-        {
-            cout << "Disconnected from the server when receiving length of the grid..." << endl;
-            return disconnected;
-        }
-        int num_of_attempts = ntohl(tmp);
-
-        vector<tuple<char, int, char>> foreign_attempts{};
-        for (int i = 0; i < num_of_attempts; i++)
-        {
-            char col, hm;
-            int row;
-            recvAttempt(&col, &row, &hm);
-            if (this->status != good)
-                return this->status;
-            auto att = make_tuple(col, row, hm);
-            foreign_attempts.push_back(att);
-        }
+        vector<tuple<char, int, char>> foreign_attempts = recvAllAttempts();
+        if (this->status != good)
+            return this->status;
 
         // TODO: Print the attempts
 
         // sending the cell you want to bomb
         sendStrike();
 
-        // receive the new attempts after strike
+        // receive the result of the strike you just sent out
         char col, hm;
         int row;
         recvAttempt(&col, &row, &hm);
@@ -367,6 +353,41 @@ void Client::recvAttempt(char *col, int *row, char *hm)
 
     this->status = good;
     return;
+}
+
+vector<tuple<char, int, char>> Client::recvAllAttempts()
+{
+    // receiving the length of the vector
+    int tmp;
+    int bytes_rec = recv(socketid, &tmp, sizeof(int), 0);
+    if (bytes_rec < 0)
+    {
+        cout << "Local error when receiving the length of the grid of the player you want to attack..." << endl;
+        this->status = localerr;
+        return {};
+    }
+    else if (bytes_rec == 0)
+    {
+        cout << "Disconnected from the server when receiving length of the grid..." << endl;
+        this->status = disconnected;
+        return {};
+    }
+    int num_of_attempts = ntohl(tmp);
+
+    vector<tuple<char, int, char>> received_attempts{};
+    for (int i = 0; i < num_of_attempts; i++)
+    {
+        char col, hm;
+        int row;
+        recvAttempt(&col, &row, &hm);
+        if (this->status != good)
+            return {};
+        auto att = make_tuple(col, row, hm);
+        received_attempts.push_back(att);
+    }
+
+    this->status = good;
+    return received_attempts;
 }
 
 bool Client::hasSpace(string word)

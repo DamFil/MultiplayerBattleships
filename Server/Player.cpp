@@ -106,6 +106,12 @@ threadvalue Player::getNameAndStart()
             return localerr;
         }
 
+        // TODO: Send the attempts this player accumulated over the last turn
+        // TODO: You should change this so it just sends the new attempts rather than the whole thing again
+        sendAllAttempts(this);
+        if (this->status != good)
+            return this->status;
+
         string names = gameinfo->getNames(this);
 
         // send the header and the names
@@ -179,7 +185,7 @@ threadvalue Player::getNameAndStart()
         pair<char, int> att(col, row);
         to_attack->addAttempt(att);
 
-        // TODO: send the result of the new attempt
+        // sending the result of the new attempt
         vector<tuple<char, int, char>> new_foreign_attemps = to_attack->getAttempts();
         sendAttempt(new_foreign_attemps.back());
         if (this->status != good)
