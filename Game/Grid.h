@@ -22,7 +22,6 @@ class Grid
 {
 private:
     vector<vector<char>> map{MAXROWS, vector<char>(MAXCOLS, '-')};
-    vector<vector<char>> attemptsMap{map};
     vector<GeneralBattleship *> battleships{};
 
 public:
@@ -130,24 +129,24 @@ public:
         return true;
     }
 
-    void updateAttemptsMap(int row, int col)
+    void addAttempts(int row, int col, char hm)
     {
-        if (map.at(row).at(col) != '-')
-            attemptsMap.at(row).at(col) = 'X';
-        else
-            attemptsMap.at(row).at(col) = 'O';
+        map.at(row).at(col) = hm;
+        // TODO: Make the map display F for fully sunk ships
     }
 
-    void displayAttempsMap()
+    void printMyMapAndAttack(vector<vector<char>> foreign_map)
     {
-        cout << " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ\n\n"
+        string padding = "\t\t\t\t\t\t\t\t\t\t\t\t\t";
+        string alphabet = " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ";
+        cout << alphabet << padding << alphabet << "\n\n"
              << endl;
         for (int i = 0; i < MAXROWS; i++)
         {
-            cout << i + 1 << "\t";
+            cout << i + 1 << padding << i + 1 << "\t";
             for (int j = 0; j < MAXCOLS; j++)
             {
-                cout << attemptsMap.at(i).at(j) << "\t";
+                cout << map.at(i).at(j) << padding << foreign_map.at(i).at(j) << "\t";
             }
             cout << "\n\n\n";
         }

@@ -80,23 +80,27 @@ bool NewPlayer::newShip(ShipType t, char col, int row, char orientation)
     return true;
 }
 
+void NewPlayer::showMap(vector<tuple<char, int, char>> foreign_attempts)
+{
+    vector<vector<char>> foreign_map{MAXROWS, vector<char>(MAXCOLS, '-')};
+    for (auto att : foreign_attempts)
+    {
+        int row = get<1>(att) - 1;
+        int col = ctoi[get<0>(att)];
+        foreign_map.at(row).at(col) = get<2>(att);
+    }
+    grid->printMyMapAndAttack(foreign_map);
+}
+
 void NewPlayer::showMap()
 {
     grid->displayMap();
 }
 
-void NewPlayer::showAttemptsMap()
+void NewPlayer::addAttempt(tuple<char, int, char> att)
 {
-    grid->displayAttempsMap();
-}
-
-bool NewPlayer::attack(NewPlayer *p, char col, int row)
-{
-    if ((col >= 'A' && col <= 'J') && (row >= 1 && row <= 10))
-    {
-        p->grid->updateAttemptsMap(row - 1, ctoi[col]);
-        return true;
-    }
-
-    return false;
+    int col = ctoi[get<0>(att)];
+    int row = get<1>(att) - 1;
+    char hm = get<2>(att);
+    grid->addAttempts(col, row, hm);
 }

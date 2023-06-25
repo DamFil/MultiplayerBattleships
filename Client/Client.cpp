@@ -239,7 +239,11 @@ clientvalue Client::attack()
         if (this->status != good)
             return this->status;
 
-        // TODO: set the above vector to my player's attempt vector
+        // updating my map based on other players' attempts
+        for (auto att : my_attemps)
+        {
+            p->addAttempt(att);
+        }
 
         cout << "Starting the attack!" << endl;
 
@@ -283,7 +287,8 @@ clientvalue Client::attack()
         if (this->status != good)
             return this->status;
 
-        // TODO: Print the attempts
+        // Printing my map and the attempts of the foreign player
+        p->showMap(foreign_attempts);
 
         // sending the cell you want to bomb
         sendStrike();
@@ -296,7 +301,7 @@ clientvalue Client::attack()
             return this->status;
 
         foreign_attempts.push_back(make_tuple(col, row, hm));
-        // TODO: Print the attempts again
+        p->showMap(foreign_attempts);
 
         cout << "You finished the attacking round" << endl;
     }

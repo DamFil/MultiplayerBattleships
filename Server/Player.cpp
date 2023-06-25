@@ -106,7 +106,7 @@ threadvalue Player::getNameAndStart()
             return localerr;
         }
 
-        // TODO: Send the attempts this player accumulated over the last turn
+        //  Sending the attempts this player accumulated over the last turn
         // TODO: You should change this so it just sends the new attempts rather than the whole thing again
         sendAllAttempts(this);
         if (this->status != good)
@@ -297,12 +297,12 @@ void Player::addAttempt(pair<char, int> attempt)
     {
         if (checkHit(get<0>(ship_pos[i]), get<1>(ship_pos[i]), get<2>(ship_pos[i]), lengths[i], attempt))
         {
-            this->attemps.push_back(make_tuple(attempt.first, attempt.second, 'H'));
+            this->attemps.push_back(make_tuple(attempt.first, attempt.second, 'X'));
             return;
         }
     }
 
-    this->attemps.push_back(make_tuple(attempt.first, attempt.second, 'M'));
+    this->attemps.push_back(make_tuple(attempt.first, attempt.second, 'O'));
     return;
 }
 
