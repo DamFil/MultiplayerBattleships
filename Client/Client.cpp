@@ -217,13 +217,231 @@ bool Client::addShipLocal(ShipType t, char col, int row, char orientation)
 
 clientvalue Client::attack()
 {
-    char sg;
-    if (recv(this->socketid, &sg, 1, MSG_WAITALL) < 0) //! this does not wait for some reason
+    while (true)
     {
-        cout << "Wait to receive signal for starting the attack..." << endl;
-        return localerr;
+        // receiving the start attack signal
+        char start_attack;
+        int bytes_rec;
+        if ((bytes_rec = recv(this->socketid, &start_attack, 1, MSG_WAITALL)) < 0)
+        {
+            cout << "Failed to receive signal for starting the attack..." << endl;
+            return localerr;
+        }
+
+        if (start_attack != 'A' || bytes_rec == 0)
+        {
+            cout << "Incorrect start_attack value..." << endl;
+            return disconnected;
+        }
+
+        cout << "Starting the attack!" << endl;
+
+        // receiving the names length
+        int tmp;
+        bytes_rec = recv(socketid, &tmp, sizeof(int), MSG_WAITALL);
+        if (bytes_rec < 0)
+        {
+            cout << "Local error when receiving the header for the names..." << endl;
+            return localerr;
+        }
+        else if (bytes_rec == 0)
+        {
+            cout << "Local error when receiving the header for the names..." << endl;
+            return disconnected;
+        }
+        int header = ntohl(tmp);
+
+        // receiving the actual names
+        char buf[header];
+        bytes_rec = recv(socketid, &buf, header, MSG_WAITALL);
+        if (bytes_rec < 0)
+        {
+            cout << "Local error when receiving the names..." << endl;
+            return localerr;
+        }
+        else if (bytes_rec == 0)
+        {
+            cout << "Disconnection prior to receiving the names..." << endl;
+            return disconnected;
+        }
+        string names = string(buf).substr(0, header);
+
+        // choosing the player to attack and sending the name to the server
+        choosePlayerToAttack(names);
+        if (this->status != good)
+            return this->status;
+
+        // receiving the attempts of the player so that you can print it
+        bytes_rec = recv(socketid, &tmp, sizeof(int), 0);
+        if (bytes_rec < 0)
+        {
+            cout << "Local error when receiving the length of the grid of the player you want to attack..." << endl;
+            return localerr;
+        }
+        else if (bytes_rec == 0)
+        {
+            cout << "Disconnected from the server when receiving length of the grid..." << endl;
+            return disconnected;
+        }
+        int num_of_attempts = ntohl(tmp);
+
+        vector<tuple<char, int, char>> foreign_attempts{};
+        for (int i = 0; i < num_of_attempts; i++)
+        {
+            char col, hm;
+            int row;
+            recvAttempt(&col, &row, &hm);
+            if (this->status != good)
+                return this->status;
+            auto att = make_tuple(col, row, hm);
+            foreign_attempts.push_back(att);
+        }
+
+        // TODO: Print the attempts
+
+        // sending the cell you want to bomb
+        sendStrike();
+
+        // receive the new attempts after strike
+        char col, hm;
+        int row;
+        recvAttempt(&col, &row, &hm);
+        if (this->status != good)
+            return this->status;
+
+        foreign_attempts.push_back(make_tuple(col, row, hm));
+        // TODO: Print the attempts again
+
+        cout << "You finished the attacking round" << endl;
+    }
+}
+
+void Client::recvAttempt(char *col, int *row, char *hm)
+{
+    // receiving the column
+    int tmp;
+    int bytes_rec = recv(socketid, col, 1, MSG_WAITALL);
+    if (bytes_rec < 0)
+    {
+        cout << "Could not receive the column of the attempt..." << endl;
+        this->status = localerr;
+        return;
+    }
+    else if (bytes_rec == 0)
+    {
+        cout << "Could not receive the column of the attempt..." << endl;
+        this->status = disconnected;
+        return;
     }
 
-    cout << "Starting the attack!" << endl;
-    return good;
+    // receiving the row
+    bytes_rec = recv(socketid, &tmp, 1, MSG_WAITALL);
+    if (bytes_rec < 0)
+    {
+        cout << "Could not receive the row of the attempt..." << endl;
+        this->status = localerr;
+        return;
+    }
+    else if (bytes_rec == 0)
+    {
+        cout << "could not receive the row of the attempt..." << endl;
+        this->status = disconnected;
+        return;
+    }
+    *row = ntohl(tmp);
+
+    // receiving the hit/miss
+    int bytes_rec = recv(socketid, hm, 1, MSG_WAITALL);
+    if (bytes_rec < 0)
+    {
+        cout << "Could not receive the column of the attempt..." << endl;
+        this->status = localerr;
+        return;
+    }
+    else if (bytes_rec == 0)
+    {
+        cout << "Could not receive the column of the attempt..." << endl;
+        this->status = disconnected;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+bool Client::hasSpace(string word)
+{
+    for (int i = 0; i < word.length(); i++)
+    {
+        if (word[i] == ' ')
+            return true;
+    }
+
+    return false;
+}
+
+void Client::choosePlayerToAttack(string names)
+{
+    // choosing the player to attack
+    cout << "Please choose the player you want to attack: \n"
+         << names << endl;
+    string choice_to_attack;
+    cin >> choice_to_attack;
+
+    while (names.find(choice_to_attack) != string::npos || hasSpace(choice_to_attack))
+    {
+        cout << "Your answer must be one of the names above and cannot have a space in it." << endl;
+        cin >> choice_to_attack;
+    }
+
+    // sending the length of the name
+    int header = htonl(choice_to_attack.length());
+    if (send(socketid, &header, sizeof(int), 0) < 0)
+    {
+        cout << "Failure sending the length of the name of the player to attack..." << endl;
+        this->status = localerr;
+        return;
+    }
+
+    // sending the actual player's name
+    if (send(socketid, choice_to_attack.c_str(), choice_to_attack.length(), 0) < 0)
+    {
+        cout << "Failure sending the name of the player to attack..." << endl;
+        this->status = localerr;
+        return;
+    }
+}
+
+void Client::sendStrike()
+{
+    string cell;
+    char col;
+    int row;
+
+    cout << "What cell would you like to bomb? (COLROW)" << endl;
+    cin >> cell;
+
+    while (parseCell(cell, &col, &row))
+    {
+        cout << "The cell you entered is incorrect. Make sure it follows the COLROW format..." << endl;
+        cin >> cell;
+    }
+
+    if (send(socketid, &col, 1, 0) < 0)
+    {
+        cout << "Failed sending the attempt cell column..." << endl;
+        this->status = localerr;
+        return;
+    }
+
+    int nrow = htonl(row);
+    if (send(socketid, &nrow, sizeof(int), 0) < 0)
+    {
+        cout << "Failed sending the attempt cell row..." << endl;
+        this->status = localerr;
+        return;
+    }
+
+    this->status = good;
+    return;
 }

@@ -77,14 +77,6 @@ threadvalue Player::getNameAndStart()
 
     gameinfo->setStopConnect(true);
 
-    // notifying the client that the attack phase is going to start
-    char sa = 'A';
-    if (send(sockfd, &sa, 1, 0) < 0)
-    {
-        cout << "Failed sending the attack start signal..." << endl;
-        return localerr;
-    }
-
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ATTACKING LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     while (true)
     {
@@ -99,7 +91,8 @@ threadvalue Player::getNameAndStart()
             return good;
         }
 
-        // terminates if it won
+        // terminates if it won - it will only detect if it won at the start of its turn
+        // this is because each player is responsible itself for detecting when it lost
         if (gameinfo->getNumPlayers() == 1)
         {
             turn_locker.unlock();
@@ -150,7 +143,11 @@ threadvalue Player::getNameAndStart()
 
         Player *to_attack = gameinfo->getPlayer(to_be_attacked_name);
 
-        // before getting the cell we need to send all of the attempts of that player so that the attacker knows the hits and the misses
+        /*
+         before getting the cell we need to send all of the attempts of that player
+         so that the attacker knows the hits and the misses
+        */
+
         sendAllAttempts(to_attack);
         if (this->status != good)
         {
@@ -181,6 +178,12 @@ threadvalue Player::getNameAndStart()
         // we need to add that attempt to the player's list of attempts
         pair<char, int> att(col, row);
         to_attack->addAttempt(att);
+
+        // TODO: send the result of the new attempt
+        vector<tuple<char, int, char>> new_foreign_attemps = to_attack->getAttempts();
+        sendAttempt(new_foreign_attemps.back());
+        if (this->status != good)
+            return this->status;
 
         // at the end we unlock and set attack back to false
         turn_locker.unlock();
@@ -250,13 +253,54 @@ void Player::setAttack()
     this->ready = true;
 }
 
+bool Player::checkHit(char col_pos, int row_pos, char orient, int length, pair<char, int> attempt)
+{
+    if (orient == 'H')
+    {
+        if (attempt.second != row_pos)
+            return false;
+
+        if ((attempt.first < col_pos) || (attempt.first > (col_pos + length - 1)))
+            return false;
+    }
+    else if (orient == 'V')
+    {
+        if (attempt.first != col_pos)
+            return false;
+
+        if ((attempt.second > row_pos) || (attempt.second < (row_pos - length + 1)))
+            return false;
+    }
+
+    return true;
+}
+
 void Player::addAttempt(pair<char, int> attempt)
 {
     lock_guard<mutex> l(this->player_mutex);
-    this->attemps.push_back(attempt);
+
+    // checking if the attempt already exists
+    for (auto att : attemps)
+    {
+        if (get<0>(att) == attempt.first && get<1>(att) == attempt.second)
+            return;
+    }
+
+    vector<int> lengths{5, 4, 3, 2, 2, 1, 1};
+    for (int i = 0; i < ship_pos.size(); i++)
+    {
+        if (checkHit(get<0>(ship_pos[i]), get<1>(ship_pos[i]), get<2>(ship_pos[i]), lengths[i], attempt))
+        {
+            this->attemps.push_back(make_tuple(attempt.first, attempt.second, 'H'));
+            return;
+        }
+    }
+
+    this->attemps.push_back(make_tuple(attempt.first, attempt.second, 'M'));
+    return;
 }
 
-vector<pair<char, int>> Player::getAttempts()
+vector<tuple<char, int, char>> Player::getAttempts()
 {
     lock_guard<mutex> l(this->player_mutex);
     return this->attemps;
@@ -283,9 +327,9 @@ threadvalue Player::checkBytesRec()
     }
 }
 
-void Player::sendAttempt(pair<char, int> attempt)
+void Player::sendAttempt(tuple<char, int, char> attempt)
 {
-    char col = attempt.first;
+    char col = get<0>(attempt);
     if (send(this->sockfd, &col, 1, 0) < 0)
     {
         this->status = localerr;
@@ -293,11 +337,19 @@ void Player::sendAttempt(pair<char, int> attempt)
         return;
     }
 
-    int row = htonl(attempt.second);
+    int row = htonl(get<1>(attempt));
     if (send(this->sockfd, &row, sizeof(int), 0) < 0)
     {
         this->status = localerr;
         cout << "Failed sending the row of the attempt..." << endl;
+        return;
+    }
+
+    char hm = get<2>(attempt);
+    if (send(this->sockfd, &hm, 1, 0) < 0)
+    {
+        this->status = localerr;
+        cout << "Failed whether the attempt was a hit or a miss..." << endl;
         return;
     }
 
@@ -308,7 +360,7 @@ void Player::sendAttempt(pair<char, int> attempt)
 void Player::sendAllAttempts(Player *p)
 {
     // first sends how many attempts there are (HEADER)
-    vector<pair<char, int>> foreign_attempts = p->getAttempts();
+    vector<tuple<char, int, char>> foreign_attempts = p->getAttempts();
     int attemps_size = foreign_attempts.size();
     header = htonl(attemps_size);
     if (send(this->sockfd, &header, sizeof(int), 0) < 0)

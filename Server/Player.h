@@ -36,7 +36,7 @@ private:
     int bytes_sent, bytes_rec;
     threadvalue status;
     vector<tuple<char, int, char>> ship_pos{}; // keeps track of the ship positions of the player (including the ship oritentations)
-    vector<pair<char, int>> attemps{};         // keeps track of the attempts other players made on destroying the ships
+    vector<tuple<char, int, char>> attemps{};  // keeps track of the attempts other players made on destroying the ships - last char specifies whether it was a hit or a miss
     bool ready, attack, lost;                  // ready specifies that the ships are initialzied and attack specifies that it is this players turn to attack. Lost specifies if the player had lost
 
 public:
@@ -59,7 +59,7 @@ public:
 
     void setAttack();
 
-    vector<pair<char, int>> getAttempts();
+    vector<tuple<char, int, char>> getAttempts();
 
     void addAttempt(pair<char, int>);
 
@@ -74,9 +74,11 @@ private:
 
     bool getAllShips();
 
-    void sendAttempt(pair<char, int> at);
+    void sendAttempt(tuple<char, int, char> at);
 
     void sendAllAttempts(Player *p);
 
     bool checkIfLost();
+
+    bool checkHit(char col_pos, int row_pos, char orient, int length, pair<char, int>);
 };

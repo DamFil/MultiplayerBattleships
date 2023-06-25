@@ -85,6 +85,7 @@ Output ConnManager::acceptConnections()
 
     // TODO: accept spectators
 
+    // waiting for all waitForDisconnect threads to finish
     for (int i = 0; i < waiting_for_dc.size(); i++)
     {
         waiting_for_dc[i].join();
