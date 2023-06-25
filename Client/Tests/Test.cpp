@@ -67,7 +67,15 @@ int main(int argc, char *argv[])
     client->addShipLocal(S, 'I', 9, 'V');
     client->sendShip('I', 9, 'V');
 
-    client->attack();
+    rtrn = client->attack();
+    if (rtrn != good)
+    {
+        cout << "Error communcating with the client..." << endl;
+        connm->closeSocket();
+        delete client;
+        delete connm;
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }

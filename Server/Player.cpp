@@ -81,7 +81,8 @@ threadvalue Player::getNameAndStart()
     while (true)
     {
         unique_lock<mutex> turn_locker(gameinfo->turn_lock);
-        gameinfo->turn_notifier.wait(turn_locker, getAttack); // this will only unlock when the turn selector thread finishes setting the turn
+        gameinfo->turn_notifier.wait(turn_locker, [this]
+                                     { return this->attack; }); // this will only unlock when the turn selector thread finishes setting the turn
 
         // first checks if it lost from the previous players attacks
         if (checkIfLost())
@@ -167,7 +168,7 @@ threadvalue Player::getNameAndStart()
         res = checkBytesRec();
         if (res != good)
         {
-            cout << "Failed getting the player-to-be-attacked name..." << endl;
+            cout << "Failed getting the column of the cell to attack..." << endl;
             return res;
         }
 
@@ -176,7 +177,7 @@ threadvalue Player::getNameAndStart()
         res = checkBytesRec();
         if (res != good)
         {
-            cout << "Failed getting the player-to-be-attacked name..." << endl;
+            cout << "Failed getting the row of the cell to attack..." << endl;
             return res;
         }
         row = ntohl(tmp);
@@ -389,21 +390,16 @@ void Player::sendAllAttempts(Player *p)
 
 bool Player::checkIfLost()
 {
-    // creaing an array of just col and row positions
-    vector<pair<char, int>> just_pos{};
-    for (auto pos : ship_pos)
+    // if number of Xs (hits) is equal to number of cells covered by the ships then evberything is sunk and the player lost
+    int count_X = 0;
+    int num_ship_cells = 5 + 4 + 3 + 4 + 2;
+    for (auto attempt : attemps)
     {
-        just_pos.push_back(pair<char, int>(get<0>(pos), get<1>(pos)));
+        if (get<2>(attempt) == 'X')
+            ++count_X;
     }
 
-    int found = 0;
-    for (auto att : attemps)
-    {
-        if (find(just_pos.begin(), just_pos.end(), att) != just_pos.end())
-            ++found;
-    }
-
-    if (found == just_pos.size())
+    if (count_X == num_ship_cells)
         return true;
 
     return false;

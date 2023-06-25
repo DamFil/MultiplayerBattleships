@@ -342,7 +342,7 @@ void Client::recvAttempt(char *col, int *row, char *hm)
     *row = ntohl(tmp);
 
     // receiving the hit/miss
-    int bytes_rec = recv(socketid, hm, 1, MSG_WAITALL);
+    bytes_rec = recv(socketid, hm, 1, MSG_WAITALL);
     if (bytes_rec < 0)
     {
         cout << "Could not receive the column of the attempt..." << endl;

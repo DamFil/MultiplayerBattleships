@@ -50,5 +50,5 @@ private:
     void choosePlayerToAttack(string names);
     void sendStrike();
     bool hasSpace(string word);
-    void displayForeignAttempts(vector<char, int, char>);
+    void displayForeignAttempts(vector<tuple<char, int, char>>);
 };

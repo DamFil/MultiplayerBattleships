@@ -67,7 +67,7 @@ Output ConnManager::setupAndListen()
 
 Output ConnManager::acceptConnections()
 {
-    while (gameinfo->getNumPlayers() < MAX_PLAYERS && !gameinfo->getStopConnect())
+    while (gameinfo->getNumPlayers() < MAX_PLAYERS || !gameinfo->getStopConnect())
     {
         socklen_t newconn_size = sizeof newconn;
         int newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
