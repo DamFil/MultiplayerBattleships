@@ -255,7 +255,7 @@ bool Player::getAttack()
 void Player::setAttack()
 {
     lock_guard<mutex> l(this->player_mutex);
-    this->ready = true;
+    this->attack = true;
 }
 
 bool Player::checkHit(char col_pos, int row_pos, char orient, int length, pair<char, int> attempt)

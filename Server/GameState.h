@@ -16,6 +16,10 @@ private:
     vector<Player *> active_players{};
     bool stop_connect; // notifies the main thread to stop accepting further connections for players
 
+    void startTurns()
+    {
+    }
+
 public:
     mutex turn_lock;
     condition_variable turn_notifier;
@@ -101,13 +105,8 @@ public:
             ans &= active_players[i]->getReady();
         }
 
-        // makes sure that the thread gets invoked only at the right time and only once
         if (ans && num_players >= 2 && !stop_connect)
-        {
             this->stop_connect = true;
-            // start the turnRegulator thread
-            thread turn_thread(&GameState::turnRegulator, this);
-        }
 
         return ans;
     }
@@ -176,26 +175,5 @@ public:
         }
 
         return names;
-    }
-
-    void turnRegulator()
-    {
-
-        int i = 0;
-        while (this->getNumPlayers() > 1) // this will be replaced by some winning condition
-        {
-            // acquire lock
-            unique_lock<mutex> turn_locker(this->turn_lock);
-            Player *p = this->getPlayer(i);
-            if (p == nullptr)
-                continue;
-            p->setAttack();
-            turn_locker.unlock();
-            this->turn_notifier.notify_all(); // notifies the right waiting player to start attacking
-            i = (i + 1) % this->getNumPlayers();
-        }
-
-        cout << "Congratulations " << this->getPlayer(0)->getName() << ", you won!" << endl;
-        return;
     }
 };

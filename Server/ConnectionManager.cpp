@@ -67,6 +67,8 @@ Output ConnManager::setupAndListen()
 
 Output ConnManager::acceptConnections()
 {
+    // start the turnRegulator thread
+    thread turn_thread(&ConnManager::turnRegulator, this);
     int newsock;
     while (gameinfo->getNumPlayers() < MAX_PLAYERS || !gameinfo->getStopConnect())
     {
@@ -96,6 +98,11 @@ Output ConnManager::acceptConnections()
     TODO: Start accepting the spectators starting from the newsock
     */
 
+    while (true)
+    {
+        this_thread::sleep_for(chrono::seconds(10));
+    }
+
     // waiting for all waitForDisconnect threads to finish
     for (int i = 0; i < waiting_for_dc.size(); i++)
     {
@@ -103,6 +110,8 @@ Output ConnManager::acceptConnections()
         if (this->status != good)
             return failure;
     }
+
+    turn_thread.join();
 
     return success;
 }
@@ -133,5 +142,29 @@ void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
         // TODO run a procedure for clearing out all the spectators as the game finished
     }
 
+    return;
+}
+
+void ConnManager::turnRegulator()
+{
+    while (!gameinfo->getStopConnect())
+    {
+        this_thread::sleep_for(chrono::milliseconds(50));
+    }
+    int i = 0;
+    while (gameinfo->getNumPlayers() > 1) // this will be replaced by some winning condition
+    {
+        // acquire lock
+        unique_lock<mutex> turn_locker(gameinfo->turn_lock);
+        Player *p = gameinfo->getPlayer(i);
+        if (p == nullptr)
+            continue;
+        p->setAttack();
+        turn_locker.unlock();
+        gameinfo->turn_notifier.notify_all(); // notifies the right waiting player to start attacking
+        i = (i + 1) % gameinfo->getNumPlayers();
+    }
+
+    cout << "Congratulations " << gameinfo->getPlayer(0)->getName() << ", you won!" << endl;
     return;
 }
