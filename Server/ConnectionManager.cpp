@@ -151,18 +151,20 @@ void ConnManager::turnRegulator()
     {
         this_thread::sleep_for(chrono::milliseconds(50));
     }
-    int i = 0;
-    while (gameinfo->getNumPlayers() > 1) // this will be replaced by some winning condition
+
+    while (gameinfo->getNumPlayers() > 1)
     {
-        // acquire lock
-        unique_lock<mutex> turn_locker(gameinfo->turn_lock);
-        Player *p = gameinfo->getPlayer(i);
-        if (p == nullptr)
-            continue;
-        p->setAttack();
-        turn_locker.unlock();
-        gameinfo->turn_notifier.notify_all(); // notifies the right waiting player to start attacking
-        i = (i + 1) % gameinfo->getNumPlayers();
+        for (int i = 0; i < gameinfo->getNumPlayers(); i++)
+        {
+            // acquire lock
+            unique_lock<mutex> turn_locker(gameinfo->turn_lock);
+            Player *p = gameinfo->getPlayer(i);
+            if (p == nullptr)
+                continue;
+            p->setAttack();
+            turn_locker.unlock();
+            gameinfo->turn_notifier.notify_all(); // notifies the right waiting player to start attacking
+        }
     }
 
     cout << "Congratulations " << gameinfo->getPlayer(0)->getName() << ", you won!" << endl;

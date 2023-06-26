@@ -4,7 +4,7 @@
 using namespace std;
 
 Player::Player(int sockfd, GameState *gameinfo) : sockfd(sockfd), gameinfo(gameinfo),
-                                                  status(threadvalue::good), name(""), ready(false), lost(false) {}
+                                                  status(threadvalue::good), name(""), ready(false), lost(false), attack(false) {}
 
 Player::~Player()
 {
@@ -192,8 +192,8 @@ threadvalue Player::getNameAndStart()
             return this->status;
 
         // at the end we unlock and set attack back to false
-        turn_locker.unlock();
         this->attack = false;
+        turn_locker.unlock();
     }
 
     return good;
