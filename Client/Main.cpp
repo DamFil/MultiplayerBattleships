@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     clientvalue rtrn = client->initPlayer();
     if (rtrn != good)
     {
-        cout << "Error communcating with the client..." << endl;
+        cout << "Error communcating with the server..." << endl;
         connm->closeSocket();
         delete client;
         delete connm;
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     rtrn = client->initAllShips();
     if (rtrn != good)
     {
-        cout << "Error communcating with the client..." << endl;
+        cout << "Error communcating with the server..." << endl;
         connm->closeSocket();
         delete client;
         delete connm;
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     rtrn = client->attack();
     if (rtrn != good)
     {
-        cout << "Error communcating with the client..." << endl;
+        cout << "Error communcating with the server..." << endl;
         connm->closeSocket();
         delete client;
         delete connm;

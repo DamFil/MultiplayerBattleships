@@ -99,7 +99,7 @@ threadvalue Player::getNameAndStart()
         }
 
         char sa = 'A';
-        if (send(sockfd, &sa, 1, 0) < 0)
+        if (send(sockfd, &sa, 1, 0) < 0) //! THIS SHOULD BE GETTING RECEIVED IMMEDIATELY
         {
             cout << "Failed sending the attack start signal..." << endl;
             return localerr;
@@ -186,7 +186,8 @@ threadvalue Player::getNameAndStart()
 
         // sending the result of the new attempt
         vector<tuple<char, int, char>> new_foreign_attemps = to_attack->getAttempts();
-        sendAttempt(new_foreign_attemps.back());
+        tuple<char, int, char> last_attempt = new_foreign_attemps.back();
+        sendAttempt(last_attempt); //! client is receiving wrong row and hm values
         if (this->status != good)
             return this->status;
 

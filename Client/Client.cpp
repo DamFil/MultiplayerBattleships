@@ -227,6 +227,7 @@ clientvalue Client::attack()
 {
     while (true)
     {
+        cout << "Waiting for other players to finish their attacking turn..." << endl;
         // receiving the start attack signal
         char start_attack;
         int bytes_rec;
@@ -300,11 +301,13 @@ clientvalue Client::attack()
 
         // sending the cell you want to bomb
         sendStrike();
+        if (this->status != good)
+            return this->status;
 
         // receive the result of the strike you just sent out
         char col, hm;
         int row;
-        recvAttempt(&col, &row, &hm);
+        recvAttempt(&col, &row, &hm); //! this isn't receiving the correct row and hm values
         if (this->status != good)
             return this->status;
 
@@ -319,7 +322,10 @@ void Client::recvAttempt(char *col, int *row, char *hm)
 {
     // receiving the column
     int tmp;
-    int bytes_rec = recv(socketid, col, 1, MSG_WAITALL);
+    char col_new, hm_new;
+    int row_new;
+
+    int bytes_rec = recv(socketid, &col_new, 1, MSG_WAITALL);
     if (bytes_rec < 0)
     {
         cout << "Could not receive the column of the attempt..." << endl;
@@ -334,7 +340,7 @@ void Client::recvAttempt(char *col, int *row, char *hm)
     }
 
     // receiving the row
-    bytes_rec = recv(socketid, &tmp, 1, MSG_WAITALL);
+    bytes_rec = recv(socketid, &tmp, sizeof(int), MSG_WAITALL);
     if (bytes_rec < 0)
     {
         cout << "Could not receive the row of the attempt..." << endl;
@@ -347,10 +353,10 @@ void Client::recvAttempt(char *col, int *row, char *hm)
         this->status = disconnected;
         return;
     }
-    *row = ntohl(tmp);
+    row_new = ntohl(tmp);
 
     // receiving the hit/miss
-    bytes_rec = recv(socketid, hm, 1, MSG_WAITALL);
+    bytes_rec = recv(socketid, &hm_new, 1, MSG_WAITALL);
     if (bytes_rec < 0)
     {
         cout << "Could not receive the column of the attempt..." << endl;
@@ -363,6 +369,10 @@ void Client::recvAttempt(char *col, int *row, char *hm)
         this->status = disconnected;
         return;
     }
+
+    *col = col_new;
+    *row = row_new;
+    *hm = hm_new;
 
     this->status = good;
     return;
@@ -416,20 +426,39 @@ bool Client::hasSpace(string word)
 
 void Client::choosePlayerToAttack(string names)
 {
-    // choosing the player to attack
-    cout << "Please choose the player you want to attack: \n"
-         << names << endl;
-    string choice_to_attack;
-    cin >> choice_to_attack;
-
-    while (names.find(choice_to_attack) != string::npos || hasSpace(choice_to_attack))
+    // splits the string names using space as the delimiter
+    // taken from: https://sentry.io/answers/split-string-in-cpp/
+    vector<string> word_names{};
+    int pos = 0;
+    while (pos < names.length())
     {
-        cout << "Your answer must be one of the names above and cannot have a space in it." << endl;
-        cin >> choice_to_attack;
+        pos = names.find(" ");
+        word_names.push_back(names.substr(0, pos));
+        names.erase(0, pos + 1);
     }
 
+    cout << "Please choose the player you want to attack:" << endl;
+    for (int i = 0; i < word_names.size(); i++)
+    {
+        cout << i + 1 << ". " << word_names[i] << endl;
+    }
+
+    // choosing the player to attack
+    int choice;
+    cin >> choice;
+
+    while (cin.fail() || choice < 1 || choice > word_names.size())
+    {
+        cin.clear();
+        cout << "You must choose between the presented options..." << endl;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // clearing the input buffer
+        cin >> choice;
+    }
+
+    string name_choice = word_names.at(choice - 1);
+
     // sending the length of the name
-    int header = htonl(choice_to_attack.length());
+    int header = htonl(name_choice.length());
     if (send(socketid, &header, sizeof(int), 0) < 0)
     {
         cout << "Failure sending the length of the name of the player to attack..." << endl;
@@ -438,7 +467,7 @@ void Client::choosePlayerToAttack(string names)
     }
 
     // sending the actual player's name
-    if (send(socketid, choice_to_attack.c_str(), choice_to_attack.length(), 0) < 0)
+    if (send(socketid, name_choice.c_str(), name_choice.length(), 0) < 0)
     {
         cout << "Failure sending the name of the player to attack..." << endl;
         this->status = localerr;
@@ -453,9 +482,10 @@ void Client::sendStrike()
     int row;
 
     cout << "What cell would you like to bomb? (COLROW)" << endl;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n'); // clearing the input buffer
     cin >> cell;
 
-    while (parseCell(cell, &col, &row))
+    while (!parseCell(cell, &col, &row))
     {
         cout << "The cell you entered is incorrect. Make sure it follows the COLROW format..." << endl;
         cin >> cell;

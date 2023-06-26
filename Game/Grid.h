@@ -137,16 +137,30 @@ public:
 
     void printMyMapAndAttack(vector<vector<char>> foreign_map)
     {
-        string padding = "\t\t\t\t\t\t\t\t\t\t\t\t\t";
+        string padding = "\t\t\t\t\t\t\t\t";
+        cout << "My map: " << endl;
         string alphabet = " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ";
-        cout << alphabet << padding << alphabet << "\n\n"
+        cout << alphabet << "\n\n"
              << endl;
         for (int i = 0; i < MAXROWS; i++)
         {
-            cout << i + 1 << padding << i + 1 << "\t";
+            cout << i + 1 << "\t";
             for (int j = 0; j < MAXCOLS; j++)
             {
-                cout << map.at(i).at(j) << padding << foreign_map.at(i).at(j) << "\t";
+                cout << map.at(i).at(j) << "\t";
+            }
+            cout << "\n\n\n";
+        }
+
+        cout << "Opponent's map:" << endl;
+        cout << alphabet << "\n\n"
+             << endl;
+        for (int i = 0; i < MAXROWS; i++)
+        {
+            cout << i + 1 << "\t";
+            for (int j = 0; j < MAXCOLS; j++)
+            {
+                cout << foreign_map.at(i).at(j) << "\t";
             }
             cout << "\n\n\n";
         }

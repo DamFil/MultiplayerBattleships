@@ -11,6 +11,8 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <ios>
+#include <limits>
 #include "../Game/NewPlayer.h"
 
 using namespace std;
