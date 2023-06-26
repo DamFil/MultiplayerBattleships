@@ -16,7 +16,7 @@ threadvalue Player::getNameAndStart()
 {
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GETTING THE NAME AND GAME START CONFIRMATION OF THE PLAYER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // client waits for this signal to start sending info
-    char st = 's';
+    char st = 'P';
     bytes_sent = send(this->sockfd, &st, 1, 0);
     if (bytes_sent < 0)
     {
@@ -74,8 +74,6 @@ threadvalue Player::getNameAndStart()
     {
         this_thread::sleep_for(chrono::milliseconds(10));
     }
-
-    gameinfo->setStopConnect(true);
 
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ATTACKING LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     while (true)

@@ -67,11 +67,23 @@ Output ConnManager::setupAndListen()
 
 Output ConnManager::acceptConnections()
 {
+    int newsock;
     while (gameinfo->getNumPlayers() < MAX_PLAYERS || !gameinfo->getStopConnect())
     {
         socklen_t newconn_size = sizeof newconn;
-        int newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
-        cout << "A player connected..." << endl;
+        newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
+        if (gameinfo->getStopConnect())
+        {
+            char sp = 'S';
+            if (send(newsock, &sp, 1, 0) < 0)
+            {
+                cout << "Could not notify the player that the game already started..." << endl;
+                // TODO: Handle all active threads if there is a need
+                return failure;
+            }
+            break;
+        }
+        cout << "A new player connected..." << endl;
 
         Player *p = new Player(newsock, this->gameinfo);
         gameinfo->addPlayer(p);
@@ -80,10 +92,9 @@ Output ConnManager::acceptConnections()
         waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread
     }
 
-    // start the turnRegulator thread
-    thread turn_thread(&ConnManager::turnRegulator, this);
-
-    // TODO: accept spectators
+    /*
+    TODO: Start accepting the spectators starting from the newsock
+    */
 
     // waiting for all waitForDisconnect threads to finish
     for (int i = 0; i < waiting_for_dc.size(); i++)
@@ -122,25 +133,5 @@ void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
         // TODO run a procedure for clearing out all the spectators as the game finished
     }
 
-    return;
-}
-
-void ConnManager::turnRegulator()
-{
-    int i = 0;
-    while (gameinfo->getNumPlayers() > 1) // this will be replaced by some winning condition
-    {
-        // acquire lock
-        unique_lock<mutex> turn_locker(gameinfo->turn_lock);
-        Player *p = gameinfo->getPlayer(i);
-        if (p == nullptr)
-            continue;
-        p->setAttack();
-        turn_locker.unlock();
-        gameinfo->turn_notifier.notify_all(); // notifies the right waiting player to start attacking
-        i = (i + 1) % gameinfo->getNumPlayers();
-    }
-
-    cout << "Congratulations " << gameinfo->getPlayer(0)->getName() << ", you won!" << endl;
     return;
 }

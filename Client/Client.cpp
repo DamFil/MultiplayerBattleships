@@ -18,6 +18,14 @@ clientvalue Client::initPlayer()
         return clientvalue::localerr;
     }
 
+    // checking if the player is a spectator or not
+    if (sg == 'S')
+    {
+        // TODO Run the spectator routine
+        cout << "A game is currently in progress... You will be disconnected form the server!" << endl;
+        return quit;
+    }
+
     // first sending the length of the name - HEADER
     int name_len = name.length();
     int net_name_len = htonl(name_len); // converting to network byte ordering
