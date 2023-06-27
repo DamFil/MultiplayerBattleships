@@ -102,5 +102,5 @@ void NewPlayer::addAttempt(tuple<char, int, char> att)
     int col = ctoi[get<0>(att)];
     int row = get<1>(att) - 1;
     char hm = get<2>(att);
-    grid->addAttempts(col, row, hm);
+    grid->addAttempts(row, col, hm);
 }
