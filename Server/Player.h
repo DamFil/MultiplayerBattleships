@@ -15,6 +15,8 @@
 using namespace std;
 
 #define MAX_SHIPS 7
+#define ERROR_INT -5667
+#define ERROR_CHAR '@'
 
 class GameState;
 
@@ -22,6 +24,8 @@ enum threadvalue
 {
     disconnected,
     localerr,
+    lose,
+    win,
     good
 };
 
@@ -32,12 +36,10 @@ private:
     int sockfd;          // the socket of the player connecting it to the client
     GameState *gameinfo; // keeps track of the state of the game
     string name;         // name of the player
-    int tmp, header;     // for receiving integers and size of next message respectively
-    int bytes_sent, bytes_rec;
     threadvalue status;
     vector<tuple<char, int, char>> ship_pos{}; // keeps track of the ship positions of the player (including the ship oritentations)
     vector<tuple<char, int, char>> attemps{};  // keeps track of the attempts other players made on destroying the ships - last char specifies whether it was a hit or a miss
-    bool ready, attack, lost;                  // ready specifies that the ships are initialzied and attack specifies that it is this players turn to attack. Lost specifies if the player had lost
+    bool ready, lost;                          // ready specifies that the ships are initialzied. Lost specifies if the player had lost
 
 public:
     Player(int sockfd, GameState *gameinfo);
@@ -45,40 +47,30 @@ public:
     ~Player();
 
     //* gets the name and asks to start the game
-    threadvalue getNameAndStart();
-
-    void playerInitThread();
-
-    void closeSocket();
+    threadvalue initPlayer();
+    threadvalue startAttack();
 
     string getName();
-
+    void closeSocket();
     bool getReady();
 
-    bool getAttack();
-
-    void setAttack();
-
-    vector<tuple<char, int, char>> getAttempts();
-
-    void addAttempt(pair<char, int>);
-
-    bool getLost();
-
 private:
-    threadvalue checkBytesRec();
-
     void addShip();
-
-    bool getShip();
-
     bool getAllShips();
 
+    vector<tuple<char, int, char>> getAttempts();
+    void addAttempt(pair<char, int>);
     void sendAttempt(tuple<char, int, char> at);
-
     void sendAllAttempts(Player *p);
 
     bool checkIfLost();
-
     bool checkHit(char col_pos, int row_pos, char orient, int length, pair<char, int>);
+
+    inline void checkBytesRec(int bytes_rec);
+    inline void sendMessage(string msg);
+    inline void sendMessage(char msg);
+    inline string recvMessage();
+    inline char recvChar();
+    inline void sendInt(int x);
+    inline int recvInt();
 };

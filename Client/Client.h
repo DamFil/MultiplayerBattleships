@@ -17,9 +17,13 @@
 
 using namespace std;
 
+#define ERROR_INT -5667
+#define ERROR_CHAR '@'
+
 enum clientvalue
 {
     good,
+    lose,
     quit,
     disconnected,
     localerr
@@ -28,29 +32,38 @@ enum clientvalue
 class Client
 {
 private:
-    clientvalue status;
-    int socketid;
+    int sockfd;
     string name;
+    clientvalue status;
     NewPlayer *p;
 
 public:
     Client(int socketid, string name);
     ~Client();
 
-    bool addShipLocal(ShipType t, char col, int row, char orientation);
     clientvalue initPlayer();
-    clientvalue sendShip(char col, int row, char orientation);
+
     clientvalue initAllShips();
+    void sendShip(char col, int row, char orientation);
+    bool addShipLocal(ShipType t, char col, int row, char orientation);
+
     clientvalue attack();
 
 private:
-    void sendMessage(string message);
     bool parseCell(string cell, char *col, int *row);
     void initShip(ShipType t, char *col, int *row, char *orientation);
+
     void recvAttempt(char *col, int *row, char *hm);
     vector<tuple<char, int, char>> recvAllAttempts();
-    void choosePlayerToAttack(string names);
+
+    void choosePlayerToAttack(vector<string> names);
     void sendStrike();
-    bool hasSpace(string word);
-    void displayForeignAttempts(vector<tuple<char, int, char>>);
+
+    inline void checkBytesRec(int bytes_rec);
+    inline void sendMessage(string msg);
+    inline void sendMessage(char msg);
+    inline string recvMessage();
+    inline char recvChar();
+    inline void sendInt(int x);
+    inline int recvInt();
 };

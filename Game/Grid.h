@@ -56,21 +56,6 @@ public:
         }
     }
 
-    void displayMap()
-    {
-        cout << " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ\n\n"
-             << endl;
-        for (int i = 0; i < MAXROWS; i++)
-        {
-            cout << i + 1 << "\t";
-            for (int j = 0; j < MAXCOLS; j++)
-            {
-                cout << map.at(i).at(j) << "\t";
-            }
-            cout << "\n\n\n";
-        }
-    }
-
     bool addShip(GeneralBattleship *bs)
     {
         // checks for boats that would collide - returns false if the new boat collides with an already added boat
@@ -135,34 +120,26 @@ public:
         // TODO: Make the map display F for fully sunk ships
     }
 
-    void printMyMapAndAttack(vector<vector<char>> foreign_map)
+    void printMap(vector<vector<char>> foreign_map)
     {
-        string padding = "\t\t\t\t\t\t\t\t";
-        cout << "My map: " << endl;
-        string alphabet = " \tA\tB\tC\tD\tE\tF\tG\tH\tI\tJ";
-        cout << alphabet << "\n\n"
+        string alphabet = "   A  B  C  D  E  F  G  H  I  J";
+        cout << alphabet << "\n"
              << endl;
         for (int i = 0; i < MAXROWS; i++)
         {
-            cout << i + 1 << "\t";
+            cout << i + 1 << "  ";
             for (int j = 0; j < MAXCOLS; j++)
             {
-                cout << map.at(i).at(j) << "\t";
+                cout << foreign_map.at(i).at(j) << "  ";
             }
-            cout << "\n\n\n";
+            cout << "\n\n";
         }
+    }
 
-        cout << "Opponent's map:" << endl;
-        cout << alphabet << "\n\n"
+    void printMyMap()
+    {
+        cout << "My map:\n"
              << endl;
-        for (int i = 0; i < MAXROWS; i++)
-        {
-            cout << i + 1 << "\t";
-            for (int j = 0; j < MAXCOLS; j++)
-            {
-                cout << foreign_map.at(i).at(j) << "\t";
-            }
-            cout << "\n\n\n";
-        }
+        printMap(this->map);
     }
 };

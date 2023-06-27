@@ -27,8 +27,6 @@ public:
     bool newShip(ShipType t, char col, int row, char orientation);
     void showMap(vector<tuple<char, int, char>>);
     void showMap();
-    void showAttemptsMap();
-    bool attack(NewPlayer *player, char col, int row);
     void addAttempt(tuple<char, int, char>);
 
 private:

@@ -4,7 +4,7 @@
 using namespace std;
 
 Player::Player(int sockfd, GameState *gameinfo) : sockfd(sockfd), gameinfo(gameinfo),
-                                                  status(threadvalue::good), name(""), ready(false), lost(false), attack(false) {}
+                                                  status(threadvalue::good), name(""), ready(false), lost(false) {}
 
 Player::~Player()
 {
@@ -12,50 +12,28 @@ Player::~Player()
     close(this->sockfd);
 }
 
-threadvalue Player::getNameAndStart()
+threadvalue Player::initPlayer()
 {
     //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GETTING THE NAME AND GAME START CONFIRMATION OF THE PLAYER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     // client waits for this signal to start sending info
-    char st = 'P';
-    bytes_sent = send(this->sockfd, &st, 1, 0);
-    if (bytes_sent < 0)
+    sendMessage('P');
+    if (this->status != good)
     {
-        cout << "Failed notifying the client to start..." << endl;
-        return localerr;
+        cout << "Failure sending thread start signal to client..." << endl;
+        return this->status;
     }
 
-    // getting the header
-    if (recv(this->sockfd, &header, sizeof(header), 0) < 0)
-    {
-        cout << "Failed receiving the name length (HEADER)..." << endl;
-        return localerr;
-    }
-    int name_len = ntohl(this->header); // converting to server byte ordering
-
-    // reading the actual name
-    char buf[name_len];
-    bytes_rec = recv(this->sockfd, buf, name_len, MSG_WAITALL); // waiting for all the bytes
-    threadvalue res = checkBytesRec();
-    if (res != threadvalue::good)
-    {
-        cout << "Failed receiving the name of the player..." << endl;
-        return res;
-    }
-
-    // have to do this because temp_name might contain some unwanted characters
-    string temp_name = buf;
-    this->name = temp_name.substr(0, name_len);
+    // getting the name
+    this->name = recvMessage();
+    if (this->status != good)
+        return this->status;
 
     // getting the answer for starting the game
-    char sg;
-    bytes_rec = recv(this->sockfd, &sg, sizeof(char), MSG_WAITALL); // sizeof char == 1 byte
-    res = checkBytesRec();
-    if (res != threadvalue::good)
-    {
-        cout << "Failed receiving start game response..." << endl;
-        return res;
-    }
+    char sg = recvChar();
+    if (this->status != good)
+        return this->status;
 
+    // just making sure that we are getting what is expected
     if (sg != 'Y')
         return localerr;
 
@@ -69,163 +47,33 @@ threadvalue Player::getNameAndStart()
     }
     this->ready = true;
 
-    // we have to wait for all the players to finish their initialization (there must be 2 or more players)
-    while (gameinfo->getNumPlayers() < 2 || !gameinfo->getStartGame())
-    {
-        this_thread::sleep_for(chrono::milliseconds(10));
-    }
-
-    //* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ATTACKING LOOP ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    while (true)
-    {
-        unique_lock<mutex> turn_locker(gameinfo->turn_lock);
-        gameinfo->turn_notifier.wait(turn_locker, [this]
-                                     { return this->attack; }); // this will only unlock when the turn selector thread finishes setting the turn
-
-        // first checks if it lost from the previous players attacks
-        if (checkIfLost())
-        {
-            this->lost = true;
-            turn_locker.unlock();
-            return good;
-        }
-
-        // terminates if it won - it will only detect if it won at the start of its turn
-        // this is because each player is responsible itself for detecting when it lost
-        if (gameinfo->getNumPlayers() == 1)
-        {
-            turn_locker.unlock();
-            return good;
-        }
-
-        char sa = 'A';
-        if (send(sockfd, &sa, 1, 0) < 0) //! THIS SHOULD BE GETTING RECEIVED IMMEDIATELY
-        {
-            cout << "Failed sending the attack start signal..." << endl;
-            return localerr;
-        }
-
-        //  Sending the attempts this player accumulated over the last turn
-        // TODO: You should change this so it just sends the new attempts rather than the whole thing again
-        sendAllAttempts(this);
-        if (this->status != good)
-            return this->status;
-
-        string names = gameinfo->getNames(this);
-
-        // send the header and the names
-        header = htonl(names.length());
-        if (send(sockfd, &header, sizeof(int), 0) < 0)
-        {
-            cout << "Failed sending the names header" << endl;
-            return localerr;
-        }
-
-        if (send(sockfd, names.c_str(), names.length(), 0) < 0)
-        {
-            cout << "Failed sending the names of the remaining players" << endl;
-            return localerr;
-        }
-
-        // now we need to receive the length of the player's name and the player's name itself
-        bytes_rec = recv(sockfd, &tmp, sizeof(int), MSG_WAITALL);
-        res = checkBytesRec();
-        if (res != good)
-        {
-            cout << "Failed getting the player-to-be-attacked name header..." << endl;
-            return res;
-        }
-        header = ntohl(tmp);
-
-        bytes_rec = recv(sockfd, buf, header, MSG_WAITALL);
-        res = checkBytesRec();
-        if (res != good)
-        {
-            cout << "Failed getting the player-to-be-attacked name..." << endl;
-            return res;
-        }
-        string to_be_attacked_name = string(buf).substr(0, header);
-
-        Player *to_attack = gameinfo->getPlayer(to_be_attacked_name);
-
-        /*
-         before getting the cell we need to send all of the attempts of that player
-         so that the attacker knows the hits and the misses
-        */
-
-        sendAllAttempts(to_attack);
-        if (this->status != good)
-        {
-            cout << "Failed at sending the attacked player's attempts..." << endl;
-            return localerr;
-        }
-
-        // now we need to receive the cell that we are bombing - col row format
-        char col;
-        bytes_rec = recv(sockfd, &col, 1, MSG_WAITALL);
-        res = checkBytesRec();
-        if (res != good)
-        {
-            cout << "Failed getting the column of the cell to attack..." << endl;
-            return res;
-        }
-
-        int row;
-        bytes_rec = recv(sockfd, &tmp, sizeof(int), MSG_WAITALL);
-        res = checkBytesRec();
-        if (res != good)
-        {
-            cout << "Failed getting the row of the cell to attack..." << endl;
-            return res;
-        }
-        row = ntohl(tmp);
-
-        // we need to add that attempt to the player's list of attempts
-        pair<char, int> att(col, row);
-        to_attack->addAttempt(att);
-
-        // sending the result of the new attempt
-        vector<tuple<char, int, char>> new_foreign_attemps = to_attack->getAttempts();
-        tuple<char, int, char> last_attempt = new_foreign_attemps.back();
-        sendAttempt(last_attempt); //! client is receiving wrong row and hm values
-        if (this->status != good)
-            return this->status;
-
-        // at the end we unlock and set attack back to false
-        this->attack = false;
-        turn_locker.unlock();
-    }
-
+    // it is important to call this function in order to update the stopConnect value in gameinfo
+    gameinfo->getStartGame();
     return good;
 }
 
 void Player::addShip()
 {
     // aircraft carrier - col, row, orient
-    // sets the attribute status to the return value of checkBytesRec() - which is then handled in the main thread code
+    // sets the attribute "status" to the return value of checkBytesRec() - which is then handled in the main thread code
+
     // getting the col
-    char col;
-    bytes_rec = recv(this->sockfd, &col, 1, MSG_WAITALL);
-    status = checkBytesRec();
-    if (status != threadvalue::good)
+    char col = recvChar();
+    if (this->status != good)
         return;
 
     // getting the row
-    bytes_rec = recv(this->sockfd, &tmp, sizeof(int), MSG_WAITALL);
-    status = checkBytesRec();
-    if (status != threadvalue::good)
+    int row = recvInt();
+    if (this->status != good)
         return;
-    int row = ntohl(tmp);
 
     // getting the orientation
-    char orient;
-    bytes_rec = recv(this->sockfd, &orient, 1, MSG_WAITALL);
-    status = checkBytesRec();
-    if (status != threadvalue::good)
+    char orient = recvChar();
+    if (this->status != good)
         return;
 
     // creating the ship tuple
-    tuple<char, int, char> pos(col, row, orient);
+    auto pos = make_tuple(col, row, orient);
     this->ship_pos.push_back(pos);
 }
 
@@ -245,18 +93,6 @@ bool Player::getReady()
 {
     lock_guard<mutex> l(this->player_mutex);
     return this->ready;
-}
-
-bool Player::getAttack()
-{
-    lock_guard<mutex> l(this->player_mutex);
-    return this->attack;
-}
-
-void Player::setAttack()
-{
-    lock_guard<mutex> l(this->player_mutex);
-    this->attack = true;
 }
 
 bool Player::checkHit(char col_pos, int row_pos, char orient, int length, pair<char, int> attempt)
@@ -312,52 +148,22 @@ vector<tuple<char, int, char>> Player::getAttempts()
     return this->attemps;
 }
 
-bool Player::getLost()
-{
-    lock_guard<mutex> l(this->player_mutex);
-    return this->lost;
-}
-
-threadvalue Player::checkBytesRec()
-{
-    switch (this->bytes_rec)
-    {
-    case -1:
-        return threadvalue::localerr;
-        break;
-    case 0:
-        return threadvalue::disconnected;
-        break;
-    default:
-        return threadvalue::good;
-    }
-}
-
 void Player::sendAttempt(tuple<char, int, char> attempt)
 {
     char col = get<0>(attempt);
-    if (send(this->sockfd, &col, 1, 0) < 0)
-    {
-        this->status = localerr;
-        cout << "Failed sending the column of the attempt..." << endl;
+    sendMessage(col);
+    if (this->status != good)
         return;
-    }
 
-    int row = htonl(get<1>(attempt));
-    if (send(this->sockfd, &row, sizeof(int), 0) < 0)
-    {
-        this->status = localerr;
-        cout << "Failed sending the row of the attempt..." << endl;
+    int row = get<1>(attempt);
+    sendInt(row);
+    if (this->status != good)
         return;
-    }
 
     char hm = get<2>(attempt);
-    if (send(this->sockfd, &hm, 1, 0) < 0)
-    {
-        this->status = localerr;
-        cout << "Failed whether the attempt was a hit or a miss..." << endl;
+    sendMessage(hm);
+    if (this->status != good)
         return;
-    }
 
     this->status = good;
     return;
@@ -365,17 +171,14 @@ void Player::sendAttempt(tuple<char, int, char> attempt)
 
 void Player::sendAllAttempts(Player *p)
 {
-    // first sends how many attempts there are (HEADER)
+    // first sends the size of the attempts vector
     vector<tuple<char, int, char>> foreign_attempts = p->getAttempts();
     int attemps_size = foreign_attempts.size();
-    header = htonl(attemps_size);
-    if (send(this->sockfd, &header, sizeof(int), 0) < 0)
-    {
-        this->status = localerr;
-        cout << "Failed sending the size of the attempts vector of the player to be attacked..." << endl;
+    sendInt(attemps_size);
+    if (this->status != good)
         return;
-    }
 
+    // then send the actual attempts
     for (auto cell : foreign_attempts)
     {
         sendAttempt(cell);
@@ -402,4 +205,194 @@ bool Player::checkIfLost()
         return true;
 
     return false;
+}
+
+threadvalue Player::startAttack()
+{
+    char sa = 'A';
+    // first checks if it lost from the previous players attacks
+    if (checkIfLost())
+    {
+        sendMessage('L');
+        if (this->status != good)
+            return this->status;
+        this->lost = true;
+        return lose;
+    }
+    else if (gameinfo->getNumPlayers() == 1) // this means you have won
+    {
+        sendMessage('W');
+        if (this->status != good)
+            return this->status;
+        return win;
+    }
+
+    sendMessage('A');
+    if (this->status != good)
+        return this->status;
+
+    //  Sending the attempts this player accumulated over the last turn
+    // TODO: You should change this so it just sends the new attempts rather than the whole thing again
+
+    // I first send my attempts
+    sendAllAttempts(this);
+    if (this->status != good)
+        return this->status;
+
+    // send the number of opponents first (number of players minus myself)
+    sendInt(gameinfo->getNumPlayers() - 1);
+    if (this->status != good)
+    {
+        cout << "Failed sending the number of opponents..." << endl;
+        return this->status;
+    }
+
+    for (int i = 0; i < gameinfo->getNumPlayers(); i++)
+    {
+        //* I send the player's name and then I send his attemtps
+        Player *p = gameinfo->getPlayer(i);
+        if (p == this)
+            continue;
+
+        // send name
+        sendMessage(p->getName());
+        if (this->status != good)
+        {
+            cout << "Failed sending the name of the opponent" << endl;
+            return this->status;
+        }
+
+        sendAllAttempts(p);
+        if (this->status != good)
+            return this->status;
+    }
+
+    // we receive the name of the opponent that we will be attacking and find the corresponding player object
+    string to_be_attacked_name = recvMessage();
+    Player *to_attack = gameinfo->getPlayer(to_be_attacked_name);
+
+    //* now we need to receive the cell that we are bombing - col row format
+    // receiving the column
+    char col = recvChar();
+    if (this->status != good)
+        return this->status;
+
+    // receiving the row
+    int row = recvInt();
+    if (this->status != good)
+        return this->status;
+
+    // we need to add that attempt to the player's list of attempts
+    auto att = make_pair(col, row);
+    to_attack->addAttempt(att);
+
+    // sending the result of the new attempt
+    tuple<char, int, char> last_attempt = to_attack->getAttempts().back();
+    sendMessage(get<2>(last_attempt));
+    if (this->status != good)
+        return this->status;
+
+    return good;
+}
+
+void Player::checkBytesRec(int bytes_rec)
+{
+    if (bytes_rec < 0)
+    {
+        this->status = localerr;
+        return;
+    }
+    else if (bytes_rec == 0)
+    {
+        this->status = disconnected;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+void Player::sendMessage(string msg)
+{
+    // sending msg length
+    sendInt(msg.length());
+    if (this->status != good)
+        return;
+
+    // sending the actual msg
+    if (send(sockfd, msg.c_str(), msg.length(), 0) < 0)
+    {
+        cout << "Failed sending the msg: " << msg << "..." << endl;
+        this->status = localerr;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+void Player::sendMessage(char msg)
+{
+    if (send(sockfd, &msg, 1, 0) < 0)
+    {
+        this->status = localerr;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+string Player::recvMessage()
+{
+    // receving the length
+    int header = recvInt();
+    if (this->status != good)
+        return "";
+
+    // receiving the actual message
+    char buf[header];
+    int bytes_rec = recv(sockfd, buf, header, MSG_WAITALL);
+    checkBytesRec(bytes_rec);
+    if (this->status != good)
+        return "";
+
+    return string(buf).substr(0, header);
+}
+
+char Player::recvChar()
+{
+    char received;
+    int bytes_rec = recv(sockfd, &received, 1, MSG_WAITALL);
+    checkBytesRec(bytes_rec);
+    if (this->status != good)
+        return ERROR_CHAR;
+
+    this->status = good;
+    return received;
+}
+
+void Player::sendInt(int x)
+{
+    int to_send = htonl(x);
+    if (send(sockfd, &to_send, sizeof(int), 0) < 0)
+    {
+        cout << "Failed sending the integer: " << x << "..." << endl;
+        this->status = localerr;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+int Player::recvInt()
+{
+    int received;
+    int bytes_rec = recv(sockfd, &received, sizeof(int), 0);
+    checkBytesRec(bytes_rec);
+    if (this->status != good)
+        return ERROR_INT;
+
+    return ntohl(received);
 }

@@ -90,7 +90,7 @@ Output ConnManager::acceptConnections()
         Player *p = new Player(newsock, this->gameinfo);
         gameinfo->addPlayer(p);
 
-        futures.push_back(async(launch::async, &Player::getNameAndStart, p));                            // starts a new player's thread
+        futures.push_back(async(launch::async, &Player::initPlayer, p));                                 // starts a new player's thread
         waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread
     }
 
@@ -119,27 +119,23 @@ Output ConnManager::acceptConnections()
 void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
 {
     threadvalue response = fu.get();
-    if (response == localerr || response == disconnected)
+
+    switch (response)
     {
+    case localerr:
         this->status = response;
-        cout << "Player: [ " << p->getName() << " ] disconnected..." << endl;
+        cout << "Error when communicating with: [ " << p->getName() << " ]..." << endl;
         gameinfo->removePlayer(p);
-    }
-
-    // we only care about the bad terminations
-    if (this->status != localerr && this->status != disconnected)
-        this->status = good;
-
-    if (p->getLost())
-    {
-        cout << "Player: [ " << p->getName() << " ] lost all his ships...He fought bravely" << endl;
+        break;
+    case disconnected:
+        // TODO: should broadcast to all active connections that the player disconnected
+        this->status = response;
+        cout << p->getName() << " disconnected..." << endl;
         gameinfo->removePlayer(p);
-    }
-    else
-    {
-        cout << "Player: [ " << p->getName() << " ] won!" << endl;
-        gameinfo->removePlayer(p);
-        // TODO run a procedure for clearing out all the spectators as the game finished
+        break;
+    case good:
+        cout << p->getName() << " is setup and ready!" << endl;
+        break;
     }
 
     return;
@@ -152,21 +148,48 @@ void ConnManager::turnRegulator()
         this_thread::sleep_for(chrono::milliseconds(50));
     }
 
-    while (gameinfo->getNumPlayers() > 1)
+    vector<string> names{};
+    for (int i = 0; i < gameinfo->getNumPlayers(); i++)
     {
-        for (int i = 0; i < gameinfo->getNumPlayers(); i++)
-        {
-            // acquire lock
-            unique_lock<mutex> turn_locker(gameinfo->turn_lock);
-            Player *p = gameinfo->getPlayer(i);
-            if (p == nullptr)
-                continue;
-            p->setAttack();
-            turn_locker.unlock();
-            gameinfo->turn_notifier.notify_all(); // notifies the right waiting player to start attacking
-        }
+        names.push_back(gameinfo->getPlayer(i)->getName());
     }
 
-    cout << "Congratulations " << gameinfo->getPlayer(0)->getName() << ", you won!" << endl;
+    int i = 0;
+    bool finished = false;
+    while (!finished)
+    {
+        Player *p = gameinfo->getPlayer(names.at(i));
+        if (p == nullptr)
+        {
+            i = (i + 1) % names.size();
+            continue;
+        }
+        future<threadvalue> attack = async(launch::async, &Player::startAttack, p);
+        threadvalue response = attack.get();
+        switch (response)
+        {
+        case localerr:
+            this->status = response;
+            cout << "Error when communicating with: [ " << p->getName() << " ]..." << endl;
+            gameinfo->removePlayer(p);
+            break;
+        case disconnected:
+            // TODO: should broadcast to all active connections that the player disconnected
+            this->status = response;
+            cout << p->getName() << " disconnected..." << endl;
+            gameinfo->removePlayer(p);
+            break;
+        case lose:
+            cout << p->getName() << " lost..." << endl;
+            gameinfo->removePlayer(p);
+            break;
+        case win:
+            cout << p->getName() << " won!" << endl;
+            gameinfo->removePlayer(p);
+            finished = true;
+            break;
+        }
+        i = (i + 1) % names.size();
+    }
     return;
 }

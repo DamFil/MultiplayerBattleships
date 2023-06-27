@@ -89,12 +89,12 @@ void NewPlayer::showMap(vector<tuple<char, int, char>> foreign_attempts)
         int col = ctoi[get<0>(att)];
         foreign_map.at(row).at(col) = get<2>(att);
     }
-    grid->printMyMapAndAttack(foreign_map);
+    grid->printMap(foreign_map);
 }
 
 void NewPlayer::showMap()
 {
-    grid->displayMap();
+    grid->printMyMap();
 }
 
 void NewPlayer::addAttempt(tuple<char, int, char> att)

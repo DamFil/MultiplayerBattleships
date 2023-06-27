@@ -1,6 +1,6 @@
 #include "Client.h"
 
-Client::Client(int socketid, string name) : socketid(socketid), name(name), p(new NewPlayer()) {}
+Client::Client(int socketid, string name) : sockfd(socketid), name(name), p(new NewPlayer()) {}
 
 Client::~Client()
 {
@@ -10,99 +10,47 @@ Client::~Client()
 clientvalue Client::initPlayer()
 {
     // waiting for a receive signal - blocks until the thread sends it something
-    char sg;
-    int bytes_rec = recv(socketid, &sg, 1, 0);
-    if (bytes_rec < 0)
+    char sg = recvChar();
+    if (this->status != good)
     {
-        cout << "Failed receiving the thread start signal..." << endl;
-        return clientvalue::localerr;
+        cout << "Failed receiving the start signal..." << endl;
+        return this->status;
     }
 
     // checking if the player is a spectator or not
+    // TODO: Instead of quitting you should just start the spectator routine
     if (sg == 'S')
     {
-        // TODO Run the spectator routine
         cout << "A game is currently in progress... You will be disconnected form the server!" << endl;
         return quit;
     }
 
-    // first sending the length of the name - HEADER
-    int name_len = name.length();
-    int net_name_len = htonl(name_len); // converting to network byte ordering
-    if (send(socketid, &net_name_len, sizeof(int), 0) < 0)
-    {
-        cerr << "Failed sending the name length..." << endl;
-        close(socketid);
-        return clientvalue::localerr;
-    }
-
-    // sending the actual name
-    const char *c_name = this->name.c_str();
-    if (send(socketid, c_name, this->name.length(), 0) < 0)
-    {
-        cout << "Failed sending the name..." << endl;
-        return localerr;
-    }
-    // sendMessage(this->name); //! THIS FAILS
-    // if (this->status != good)
-    //    return this->status;
+    // sending the name of the player
+    sendMessage(this->name);
+    if (this->status != good)
+        return this->status;
 
     // prompting the user to start the game
-    string res;
+    char res;
     cout << "Do you want to start the game? (Y/Q)" << endl;
     cin >> res;
-    while (res != "Y" && res != "Q")
+    while (res != 'Y' && res != 'Q')
     {
-        cout << "You can only answer with 'Y' or 'Q'" << endl;
+        cout << "You can only answer with Y or Q" << endl;
         cin >> res;
     }
 
-    if (res == "Q")
+    if (res == 'Q')
         return quit;
 
-    if (send(socketid, res.c_str(), 1, 0) < 0)
+    sendMessage(res);
+    if (this->status != good)
     {
-        cerr << "Failed sending 'Y'..." << endl;
-        return localerr;
+        cout << "Failed sending the start game ans" << endl;
+        return this->status;
     }
 
     return good;
-}
-
-void Client::sendMessage(string message)
-{
-    // first sending the length of message - HEADER
-    int msg_len = message.length();
-    int net_msg_len = htonl(msg_len); // converting to network byte ordering
-    if (send(socketid, &net_msg_len, sizeof(int), 0) < 0)
-    {
-        cerr << "Failed sending the message header..." << endl;
-        close(socketid);
-        this->status = localerr;
-        return;
-    }
-
-    // making sure that all of the bytes are sent
-    int total_bytes_sent = 0;
-    do
-    {
-        string rest_to_send = message.substr(total_bytes_sent); // takes the remaining, unsent part of the string
-        int len_rest = rest_to_send.length();
-
-        int bytes_sent = send(socketid, rest_to_send.c_str(), len_rest, 0);
-
-        if (bytes_sent < 0)
-        {
-            cerr << "Failed sending the message..." << endl;
-            close(socketid);
-            this->status = localerr;
-            return;
-        }
-
-        total_bytes_sent += bytes_sent;
-
-    } while (total_bytes_sent != msg_len);
-    this->status = good;
 }
 
 bool Client::parseCell(string cell, char *col, int *row)
@@ -126,30 +74,25 @@ bool Client::parseCell(string cell, char *col, int *row)
     return true;
 }
 
-clientvalue Client::sendShip(char col, int row, char orientation)
+void Client::sendShip(char col, int row, char orientation)
 {
-    if (send(socketid, &col, 1, 0) < 0)
-    {
-        cerr << "Failed sending column char..." << endl;
-        return localerr;
-    }
+    // sending the column
+    sendMessage(col);
+    if (this->status != good)
+        return;
 
     // sending the row
-    int nrow = htonl(row);
-    if (send(socketid, &nrow, sizeof(int), 0) < 0)
-    {
-        cerr << "Failed sending row number..." << endl;
-        return localerr;
-    }
+    sendInt(row);
+    if (this->status != good)
+        return;
 
     // sending the orientation
-    if (send(socketid, &orientation, 1, 0) < 0)
-    {
-        cerr << "Failed sending ship orientation..." << endl;
-        return localerr;
-    }
+    sendMessage(orientation);
+    if (this->status != good)
+        return;
 
-    return good;
+    this->status = good;
+    return;
 }
 
 void Client::initShip(ShipType t, char *col, int *row, char *orientation)
@@ -210,7 +153,7 @@ clientvalue Client::initAllShips()
     for (auto t : sts)
     {
         initShip(t, &col, &row, &orientation);
-        this->status = sendShip(col, row, orientation);
+        sendShip(col, row, orientation);
         if (this->status != good)
             break;
     }
@@ -227,77 +170,82 @@ clientvalue Client::attack()
 {
     while (true)
     {
-        cout << "Waiting for other players to finish their attacking turn..." << endl;
+        cout << "Waiting for other players to finish setting up and attacking" << endl;
+
         // receiving the start attack signal
-        char start_attack;
-        int bytes_rec;
-        if ((bytes_rec = recv(this->socketid, &start_attack, 1, MSG_WAITALL)) < 0)
+        char start_msg = recvChar();
+        if (this->status != good)
         {
-            cout << "Failed to receive signal for starting the attack..." << endl;
-            return localerr;
+            cout << "Failed receiving start attack signal" << endl;
+            return this->status;
         }
 
-        if (start_attack != 'A' || bytes_rec == 0)
+        if (start_msg == 'S')
         {
-            cout << "Incorrect start_attack value..." << endl;
-            return disconnected;
+            cout << "You lost the game...All your ships have been sunk!" << endl;
+            return lose;
+        }
+        else if (start_msg == 'W')
+        {
+            cout << "Congratualations, you won!" << endl;
+            return good;
         }
 
         // receiving the attempts accumulated over the other players' turns
-        vector<tuple<char, int, char>> my_attemps = recvAllAttempts();
+        vector<tuple<char, int, char>> my_attemps = recvAllAttempts(); //! THIS IS NOT RECEIVING RIGHT ATTEMPS
         if (this->status != good)
+        {
+            cout << "Failed receiving my attempts..." << endl;
             return this->status;
-
-        // updating my map based on other players' attempts
+        }
         for (auto att : my_attemps)
         {
             p->addAttempt(att);
         }
+        // prints my map
+        p->showMap();
+
+        // receiving the attempts of all other players and printing their maps
+        vector<string> names;
+        vector<vector<tuple<char, int, char>>> opp_maps;
+        int num_opponents = recvInt();
+        if (this->status != good)
+        {
+            cout << "Could not recv num of opponents" << endl;
+            return this->status;
+        }
+
+        for (int i = 0; i < num_opponents; i++)
+        {
+            names.push_back(recvMessage());
+            if (this->status != good)
+            {
+                cout << "Failed recv opp name..." << endl;
+                return this->status;
+            }
+
+            vector<tuple<char, int, char>> foreign_attempts = recvAllAttempts();
+            opp_maps.push_back(foreign_attempts);
+            if (this->status != good)
+            {
+                cout << "Failed recv opp attempts" << endl;
+                return this->status;
+            }
+
+            cout << names.back() << "' map:\n"
+                 << endl;
+            p->showMap(foreign_attempts);
+        }
 
         cout << "Starting the attack!" << endl;
-
-        // receiving the names length
-        int tmp;
-        bytes_rec = recv(socketid, &tmp, sizeof(int), MSG_WAITALL);
-        if (bytes_rec < 0)
-        {
-            cout << "Local error when receiving the header for the names..." << endl;
-            return localerr;
-        }
-        else if (bytes_rec == 0)
-        {
-            cout << "Local error when receiving the header for the names..." << endl;
-            return disconnected;
-        }
-        int header = ntohl(tmp);
-
-        // receiving the actual names
-        char buf[header];
-        bytes_rec = recv(socketid, &buf, header, MSG_WAITALL);
-        if (bytes_rec < 0)
-        {
-            cout << "Local error when receiving the names..." << endl;
-            return localerr;
-        }
-        else if (bytes_rec == 0)
-        {
-            cout << "Disconnection prior to receiving the names..." << endl;
-            return disconnected;
-        }
-        string names = string(buf).substr(0, header);
 
         // choosing the player to attack and sending the name to the server
         choosePlayerToAttack(names);
         if (this->status != good)
+        {
+            cout << "Failed sending the name of the opponent..." << endl;
             return this->status;
-
-        // receiving the attempts of the player so that you can print it
-        vector<tuple<char, int, char>> foreign_attempts = recvAllAttempts();
-        if (this->status != good)
-            return this->status;
-
-        // Printing my map and the attempts of the foreign player
-        p->showMap(foreign_attempts);
+        }
 
         // sending the cell you want to bomb
         sendStrike();
@@ -305,14 +253,18 @@ clientvalue Client::attack()
             return this->status;
 
         // receive the result of the strike you just sent out
-        char col, hm;
-        int row;
-        recvAttempt(&col, &row, &hm); //! this isn't receiving the correct row and hm values
+        char res = recvChar();
         if (this->status != good)
+        {
+            cout << "Could not get the result of your strike..." << endl;
             return this->status;
+        }
 
-        foreign_attempts.push_back(make_tuple(col, row, hm));
-        p->showMap(foreign_attempts);
+        // TODO: We can possibly change this to send the attempt when we do ncurses
+        if (res == 'X')
+            cout << "You hit a ship!" << endl;
+        else
+            cout << "You missed!" << endl;
 
         cout << "You finished the attacking round" << endl;
     }
@@ -321,58 +273,22 @@ clientvalue Client::attack()
 void Client::recvAttempt(char *col, int *row, char *hm)
 {
     // receiving the column
-    int tmp;
-    char col_new, hm_new;
-    int row_new;
-
-    int bytes_rec = recv(socketid, &col_new, 1, MSG_WAITALL);
-    if (bytes_rec < 0)
-    {
-        cout << "Could not receive the column of the attempt..." << endl;
-        this->status = localerr;
+    char new_col = recvChar();
+    if (this->status != good)
         return;
-    }
-    else if (bytes_rec == 0)
-    {
-        cout << "Could not receive the column of the attempt..." << endl;
-        this->status = disconnected;
-        return;
-    }
+    *col = new_col;
 
     // receiving the row
-    bytes_rec = recv(socketid, &tmp, sizeof(int), MSG_WAITALL);
-    if (bytes_rec < 0)
-    {
-        cout << "Could not receive the row of the attempt..." << endl;
-        this->status = localerr;
+    int new_row = recvInt();
+    if (this->status != good)
         return;
-    }
-    else if (bytes_rec == 0)
-    {
-        cout << "could not receive the row of the attempt..." << endl;
-        this->status = disconnected;
-        return;
-    }
-    row_new = ntohl(tmp);
+    *row = new_row;
 
     // receiving the hit/miss
-    bytes_rec = recv(socketid, &hm_new, 1, MSG_WAITALL);
-    if (bytes_rec < 0)
-    {
-        cout << "Could not receive the column of the attempt..." << endl;
-        this->status = localerr;
+    char new_hm = recvChar();
+    if (this->status != good)
         return;
-    }
-    else if (bytes_rec == 0)
-    {
-        cout << "Could not receive the column of the attempt..." << endl;
-        this->status = disconnected;
-        return;
-    }
-
-    *col = col_new;
-    *row = row_new;
-    *hm = hm_new;
+    *hm = new_hm;
 
     this->status = good;
     return;
@@ -381,21 +297,9 @@ void Client::recvAttempt(char *col, int *row, char *hm)
 vector<tuple<char, int, char>> Client::recvAllAttempts()
 {
     // receiving the length of the vector
-    int tmp;
-    int bytes_rec = recv(socketid, &tmp, sizeof(int), 0);
-    if (bytes_rec < 0)
-    {
-        cout << "Local error when receiving the length of the grid of the player you want to attack..." << endl;
-        this->status = localerr;
+    int num_of_attempts = recvInt();
+    if (this->status != good)
         return {};
-    }
-    else if (bytes_rec == 0)
-    {
-        cout << "Disconnected from the server when receiving length of the grid..." << endl;
-        this->status = disconnected;
-        return {};
-    }
-    int num_of_attempts = ntohl(tmp);
 
     vector<tuple<char, int, char>> received_attempts{};
     for (int i = 0; i < num_of_attempts; i++)
@@ -405,74 +309,32 @@ vector<tuple<char, int, char>> Client::recvAllAttempts()
         recvAttempt(&col, &row, &hm);
         if (this->status != good)
             return {};
-        auto att = make_tuple(col, row, hm);
-        received_attempts.push_back(att);
+        received_attempts.push_back(make_tuple(col, row, hm));
     }
 
     this->status = good;
     return received_attempts;
 }
 
-bool Client::hasSpace(string word)
+void Client::choosePlayerToAttack(vector<string> names)
 {
-    for (int i = 0; i < word.length(); i++)
+    string name;
+    cout << "Enter the name of the player you want to attack..." << endl;
+    bool found = false;
+    do
     {
-        if (word[i] == ' ')
-            return true;
-    }
+        cin >> name;
+        for (auto n : names)
+        {
+            if (name != n)
+                continue;
+            found = true;
+            break;
+        }
+    } while (!found);
 
-    return false;
-}
-
-void Client::choosePlayerToAttack(string names)
-{
-    // splits the string names using space as the delimiter
-    // taken from: https://sentry.io/answers/split-string-in-cpp/
-    vector<string> word_names{};
-    int pos = 0;
-    while (pos < names.length())
-    {
-        pos = names.find(" ");
-        word_names.push_back(names.substr(0, pos));
-        names.erase(0, pos + 1);
-    }
-
-    cout << "Please choose the player you want to attack:" << endl;
-    for (int i = 0; i < word_names.size(); i++)
-    {
-        cout << i + 1 << ". " << word_names[i] << endl;
-    }
-
-    // choosing the player to attack
-    int choice;
-    cin >> choice;
-
-    while (cin.fail() || choice < 1 || choice > word_names.size())
-    {
-        cin.clear();
-        cout << "You must choose between the presented options..." << endl;
-        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // clearing the input buffer
-        cin >> choice;
-    }
-
-    string name_choice = word_names.at(choice - 1);
-
-    // sending the length of the name
-    int header = htonl(name_choice.length());
-    if (send(socketid, &header, sizeof(int), 0) < 0)
-    {
-        cout << "Failure sending the length of the name of the player to attack..." << endl;
-        this->status = localerr;
-        return;
-    }
-
-    // sending the actual player's name
-    if (send(socketid, name_choice.c_str(), name_choice.length(), 0) < 0)
-    {
-        cout << "Failure sending the name of the player to attack..." << endl;
-        this->status = localerr;
-        return;
-    }
+    sendMessage(name);
+    return;
 }
 
 void Client::sendStrike()
@@ -491,21 +353,116 @@ void Client::sendStrike()
         cin >> cell;
     }
 
-    if (send(socketid, &col, 1, 0) < 0)
+    sendMessage(col);
+    if (this->status != good)
+        return;
+
+    sendInt(row);
+    if (this->status != good)
+        return;
+
+    this->status = good;
+    return;
+}
+
+void Client::checkBytesRec(int bytes_rec)
+{
+    if (bytes_rec < 0)
     {
-        cout << "Failed sending the attempt cell column..." << endl;
         this->status = localerr;
         return;
     }
-
-    int nrow = htonl(row);
-    if (send(socketid, &nrow, sizeof(int), 0) < 0)
+    else if (bytes_rec == 0)
     {
-        cout << "Failed sending the attempt cell row..." << endl;
+        this->status = disconnected;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+void Client::sendMessage(string msg)
+{
+    // sending msg length
+    sendInt(msg.length());
+    if (this->status != good)
+        return;
+
+    // sending the actual msg
+    if (send(sockfd, msg.c_str(), msg.length(), 0) < 0)
+    {
+        cout << "Failed sending the msg: " << msg << "..." << endl;
         this->status = localerr;
         return;
     }
 
     this->status = good;
     return;
+}
+
+void Client::sendMessage(char msg)
+{
+    if (send(sockfd, &msg, 1, 0) < 0)
+    {
+        this->status = localerr;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+string Client::recvMessage()
+{
+    // receving the length
+    int header = recvInt();
+    if (this->status != good)
+        return "";
+
+    // receiving the actual message
+    char buf[header];
+    int bytes_rec = recv(sockfd, buf, header, MSG_WAITALL);
+    checkBytesRec(bytes_rec);
+    if (this->status != good)
+        return "";
+
+    return string(buf).substr(0, header);
+}
+
+char Client::recvChar()
+{
+    char received;
+    int bytes_rec = recv(sockfd, &received, 1, MSG_WAITALL);
+    checkBytesRec(bytes_rec);
+    if (this->status != good)
+        return ERROR_CHAR;
+
+    this->status = good;
+    return received;
+}
+
+void Client::sendInt(int x)
+{
+    int to_send = htonl(x);
+    if (send(sockfd, &to_send, sizeof(int), 0) < 0)
+    {
+        cout << "Failed sending the integer: " << x << "..." << endl;
+        this->status = localerr;
+        return;
+    }
+
+    this->status = good;
+    return;
+}
+
+int Client::recvInt()
+{
+    int received;
+    int bytes_rec = recv(sockfd, &received, sizeof(int), 0);
+    checkBytesRec(bytes_rec);
+    if (this->status != good)
+        return ERROR_INT;
+
+    return ntohl(received);
 }

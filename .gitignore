@@ -8,6 +8,7 @@ Client/a.out
 Client/Battleships
 Client/BattleshipsTest
 Client/OldClient
+Client/oldSendMsg.txt
 Server/OldServer
 Server/a.out
 Server/BattleshipsServer

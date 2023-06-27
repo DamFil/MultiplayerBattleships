@@ -108,7 +108,7 @@ public:
         if (ans && num_players >= 2 && !stop_connect)
             this->stop_connect = true;
 
-        return ans;
+        return stop_connect;
     }
 
     Player *getPlayer(int i)
