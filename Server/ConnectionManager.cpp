@@ -1,6 +1,6 @@
 #include "ConnectionManager.h"
 
-ConnManager::ConnManager(string portnum) : portnum(portnum), gameinfo(new GameState()) {}
+ConnManager::ConnManager(string portnum) : portnum(portnum), gameinfo(new GameState()), spectator(new Spectator(this->gameinfo)) {}
 ConnManager::~ConnManager()
 {
     delete this->gameinfo;
@@ -70,9 +70,9 @@ Output ConnManager::acceptConnections()
     // start the turnRegulator thread
     thread turn_thread(&ConnManager::turnRegulator, this);
     int newsock;
+    socklen_t newconn_size = sizeof newconn;
     while (gameinfo->getNumPlayers() < MAX_PLAYERS || !gameinfo->getStopConnect())
     {
-        socklen_t newconn_size = sizeof newconn;
         newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
         if (gameinfo->getStopConnect())
         {
@@ -98,9 +98,19 @@ Output ConnManager::acceptConnections()
     TODO: Start accepting the spectators starting from the newsock
     */
 
+    // accepting spectators
+    gameinfo->addSpectator(newsock);
     while (true)
     {
-        this_thread::sleep_for(chrono::seconds(10));
+        newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
+        char sp = 'S';
+        if (send(newsock, &sp, 1, 0) < 0)
+        {
+            cout << "Could not notify the player that the game already started..." << endl;
+            // TODO: Handle all active threads if there is a need
+            return failure;
+        }
+        gameinfo->addSpectator(newsock);
     }
 
     // waiting for all waitForDisconnect threads to finish
@@ -158,6 +168,7 @@ void ConnManager::turnRegulator()
     bool finished = false;
     while (!finished)
     {
+        thread spectate_thread(&Spectator::spectateGame, spectator);
         Player *p = gameinfo->getPlayer(names.at(i));
         if (p == nullptr)
         {
@@ -190,6 +201,7 @@ void ConnManager::turnRegulator()
             break;
         }
         i = (i + 1) % names.size();
+        spectate_thread.join();
     }
     return;
 }

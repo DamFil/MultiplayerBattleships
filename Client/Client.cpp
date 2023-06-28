@@ -18,11 +18,11 @@ clientvalue Client::initPlayer()
     }
 
     // checking if the player is a spectator or not
-    // TODO: Instead of quitting you should just start the spectator routine
+    // call the spectator function
     if (sg == 'S')
     {
-        cout << "A game is currently in progress... You will be disconnected form the server!" << endl;
-        return quit;
+        cout << "A game is currently in progress... You are going to spectate the ongoing game!" << endl;
+        return spectate();
     }
 
     // sending the name of the player
@@ -192,7 +192,7 @@ clientvalue Client::attack()
         }
 
         // receiving the attempts accumulated over the other players' turns
-        vector<tuple<char, int, char>> my_attemps = recvAllAttempts(); //! THIS IS NOT RECEIVING RIGHT ATTEMPS
+        vector<tuple<char, int, char>> my_attemps = recvAllAttempts();
         if (this->status != good)
         {
             cout << "Failed receiving my attempts..." << endl;
@@ -465,4 +465,84 @@ int Client::recvInt()
         return ERROR_INT;
 
     return ntohl(received);
+}
+
+clientvalue Client::spectate()
+{
+    while (true)
+    { // receiving the status of the game
+        char game_state = recvChar();
+        if (this->status != good)
+        {
+            cout << "Could not receive the state of the game..." << endl;
+            return this->status;
+        }
+
+        if (game_state == 'F')
+        {
+            cout << "The game finished... You will be disconnected from the server..." << endl;
+            break;
+        }
+
+        int num_players = recvInt();
+        if (this->status != good)
+        {
+            cout << "Could not get number of players..." << endl;
+            return this->status;
+        }
+
+        for (int i = 0; i < num_players; i++)
+        {
+            // receiving the ships
+            vector<tuple<char, int, char>> foreign_ships = recvAllShips();
+            if (this->status != good)
+            {
+                cout << "Could not receive the ship positions..." << endl;
+                return this->status;
+            }
+
+            // receiving the attempts of the player
+            vector<tuple<char, int, char>> foreign_attempts = recvAllAttempts();
+            if (this->status != good)
+            {
+                cout << "Could not receive the attempts..." << endl;
+                return this->status;
+            }
+
+            // TODO I need to print the above information
+            NewPlayer *in_game = new NewPlayer();
+            vector<ShipType> ship_order{A, B, C, D, D, S, S};
+            for (int i = 0; i < foreign_ships.size(); i++)
+            {
+                in_game->newShip(ship_order[i], get<0>(foreign_ships[i]), get<1>(foreign_ships[i]), get<2>(foreign_ships[i]));
+            }
+
+            for (auto att : foreign_attempts)
+            {
+                in_game->addAttempt(att);
+            }
+            in_game->showMap();
+            delete in_game; // TODO I should handle this in a smarter way using caching
+        }
+    }
+
+    return good;
+}
+
+vector<tuple<char, int, char>> Client::recvAllShips()
+{
+    vector<tuple<char, int, char>> ships{};
+    // since there are 7 ships in total
+    for (int i = 0; i < 7; i++)
+    {
+        char col, orient;
+        int row;
+        recvAttempt(&col, &row, &orient);
+        if (this->status != good)
+            return {};
+        ships.push_back(make_tuple(col, row, orient));
+    }
+
+    this->status = good;
+    return ships;
 }

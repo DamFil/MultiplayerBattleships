@@ -50,11 +50,15 @@ public:
     clientvalue attack();
 
 private:
+    clientvalue spectate();
+
     bool parseCell(string cell, char *col, int *row);
     void initShip(ShipType t, char *col, int *row, char *orientation);
 
     void recvAttempt(char *col, int *row, char *hm);
     vector<tuple<char, int, char>> recvAllAttempts();
+    void recvShip(char *co, int *row, char *hm);
+    vector<tuple<char, int, char>> recvAllShips();
 
     void choosePlayerToAttack(vector<string> names);
     void sendStrike();

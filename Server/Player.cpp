@@ -396,3 +396,9 @@ int Player::recvInt()
 
     return ntohl(received);
 }
+
+vector<tuple<char, int, char>> Player::getShips()
+{
+    lock_guard<mutex> l(this->player_mutex);
+    return this->ship_pos;
+}

@@ -15,10 +15,7 @@ private:
     int num_spectators;
     vector<Player *> active_players{};
     bool stop_connect; // notifies the main thread to stop accepting further connections for players
-
-    void startTurns()
-    {
-    }
+    vector<int> spectators{};
 
 public:
     mutex turn_lock;
@@ -175,5 +172,51 @@ public:
         }
 
         return names;
+    }
+
+    void addSpectator(int sockfd)
+    {
+        lock_guard<mutex> l(this->m);
+        this->spectators.push_back(sockfd);
+    }
+
+    void removeSpectator(int sockfd)
+    {
+        lock_guard<mutex> l(this->m);
+        bool found = false;
+        int i;
+        for (i = 0; i < spectators.size(); i++)
+        {
+            if (spectators[i] == sockfd)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+            return;
+
+        this->spectators.erase(spectators.end() + i);
+        return;
+    }
+
+    int getSpectator(int i)
+    {
+        lock_guard<mutex> l(this->m);
+        try
+        {
+            return this->spectators.at(i);
+        }
+        catch (const std::out_of_range)
+        {
+            return -1;
+        }
+    }
+
+    int getNumSpectators()
+    {
+        lock_guard<mutex> l(this->m);
+        return this->spectators.size();
     }
 };

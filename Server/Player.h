@@ -54,11 +54,13 @@ public:
     void closeSocket();
     bool getReady();
 
+    vector<tuple<char, int, char>> getShips();
+    vector<tuple<char, int, char>> getAttempts();
+
 private:
     void addShip();
     bool getAllShips();
 
-    vector<tuple<char, int, char>> getAttempts();
     void addAttempt(pair<char, int>);
     void sendAttempt(tuple<char, int, char> at);
     void sendAllAttempts(Player *p);
