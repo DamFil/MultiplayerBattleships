@@ -93,8 +93,8 @@ Output ConnManager::acceptConnections()
         Player *p = new Player(newsock, this->gameinfo);
         gameinfo->addPlayer(p);
 
-        futures.push_back(async(launch::async, &Player::initPlayer, p));                                 // starts a new player's thread
-        waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread that waits for the player thread to finish
+        future<threadvalue> fu = async(launch::async, &Player::initPlayer, p);                // starts a new player's thread
+        waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, move(fu), p)); // creating the thread that waits for the player thread to finish
     }
 
     // accepting spectators
@@ -112,20 +112,12 @@ Output ConnManager::acceptConnections()
         gameinfo->addSpectator(newsock);
     }
 
-    // waiting for all waitForDisconnect threads to finish
-    for (int i = 0; i < waiting_for_dc.size(); i++)
-    {
-        waiting_for_dc[i].join();
-        if (this->status != good)
-            return failure;
-    }
-
     turn_thread.join();
 
     return success;
 }
 
-void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
+void ConnManager::waitForDisconnect(future<threadvalue> fu, Player *p)
 {
     threadvalue response = fu.get();
 

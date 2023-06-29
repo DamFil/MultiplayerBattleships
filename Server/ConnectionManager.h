@@ -46,6 +46,6 @@ public:
 
     Output setupAndListen();
     Output acceptConnections();
-    void waitForDisconnect(future<threadvalue> &fu, Player *p);
+    void waitForDisconnect(future<threadvalue> fu, Player *p);
     void turnRegulator();
 };
