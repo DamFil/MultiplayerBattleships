@@ -30,13 +30,13 @@ enum Output
 class ConnManager
 {
 private:
-    threadvalue status;
+    struct addrinfo condtns;
+    struct sockaddr_storage newconn;
+    int socketid; // for the listening socket
     string portnum;
+    threadvalue status;
     vector<thread> waiting_for_dc{};
     vector<future<threadvalue>> futures{};
-    struct addrinfo condtns;
-    int socketid; // for the listening socket
-    struct sockaddr_storage newconn;
     GameState *gameinfo;
     Spectator *spectator;
 

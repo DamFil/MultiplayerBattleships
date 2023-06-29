@@ -11,22 +11,19 @@ class GameState
 {
 private:
     mutex m;
-    int num_players;
-    int num_spectators;
     vector<Player *> active_players{};
-    bool stop_connect; // notifies the main thread to stop accepting further connections for players
     vector<int> spectators{};
+    bool stop_connect; // notifies the main thread to stop accepting further connections for players
 
 public:
-    mutex turn_lock;
-    condition_variable turn_notifier;
-    GameState() : num_players(0), num_spectators(0), stop_connect(false) {}
+    mutex temp_lock;
+    condition_variable turns_start;
+    GameState() : stop_connect(false) {}
 
     void addPlayer(Player *p)
     {
         lock_guard<mutex> l(this->m);
         active_players.push_back(p);
-        ++num_players;
     }
 
     void removePlayer(Player *p)
@@ -53,7 +50,6 @@ public:
         p->closeSocket();
         delete p;
         active_players.erase(active_players.begin() + i);
-        --num_players;
     }
 
     void removePlayer(int player_pos)
@@ -72,40 +68,6 @@ public:
         p->closeSocket();
         active_players.erase(active_players.begin() + player_pos);
         delete p;
-        --num_players;
-    }
-
-    void incPlayers()
-    {
-        lock_guard<mutex> l(this->m);
-        ++num_players;
-    }
-
-    void decPlayers()
-    {
-        lock_guard<mutex> l(this->m);
-        --num_players;
-    }
-
-    int getNumPlayers()
-    {
-        lock_guard<mutex> l(this->m);
-        return this->num_players;
-    }
-
-    bool getStartGame()
-    {
-        lock_guard<mutex> l(this->m);
-        bool ans = true;
-        for (int i = 0; i < active_players.size(); i++)
-        {
-            ans &= active_players[i]->getReady();
-        }
-
-        if (ans && num_players >= 2 && !stop_connect)
-            this->stop_connect = true;
-
-        return stop_connect;
     }
 
     Player *getPlayer(int i)
@@ -142,36 +104,10 @@ public:
         return player;
     }
 
-    vector<Player *> getPlayers()
+    int getNumPlayers()
     {
         lock_guard<mutex> l(this->m);
-        return this->active_players;
-    }
-
-    void setStopConnect(bool value)
-    {
-        lock_guard<mutex> l(this->m);
-        this->stop_connect = value;
-    }
-
-    bool getStopConnect()
-    {
-        lock_guard<mutex> l(this->m);
-        return this->stop_connect;
-    }
-
-    string getNames(Player *player)
-    {
-        lock_guard<mutex> l(this->m);
-        string names = "";
-        for (auto p : active_players)
-        {
-            if (p == player)
-                continue;
-            names.append(p->getName() + " ");
-        }
-
-        return names;
+        return this->active_players.size();
     }
 
     void addSpectator(int sockfd)
@@ -218,5 +154,43 @@ public:
     {
         lock_guard<mutex> l(this->m);
         return this->spectators.size();
+    }
+
+    bool getStartGame()
+    {
+        lock_guard<mutex> l(this->m);
+        bool ans = true;
+        for (int i = 0; i < active_players.size(); i++)
+        {
+            ans &= active_players[i]->getReady();
+        }
+
+        if (ans && this->active_players.size() >= 2)
+        {
+            turns_start.notify_one();
+            this->stop_connect = true;
+        }
+
+        return stop_connect;
+    }
+
+    bool getStopConnect()
+    {
+        lock_guard<mutex> l(this->m);
+        return this->stop_connect;
+    }
+
+    string getNames(Player *player)
+    {
+        lock_guard<mutex> l(this->m);
+        string names = "";
+        for (auto p : active_players)
+        {
+            if (p == player)
+                continue;
+            names.append(p->getName() + " ");
+        }
+
+        return names;
     }
 };

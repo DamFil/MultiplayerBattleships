@@ -67,6 +67,7 @@ Output ConnManager::setupAndListen()
 
 Output ConnManager::acceptConnections()
 {
+    //! PROBLEM FOR SEG FAULTS WHEN NUM_PLAYERS > 2 IS LIKELY HERE
     // start the turnRegulator thread
     thread turn_thread(&ConnManager::turnRegulator, this);
     int newsock;
@@ -74,13 +75,15 @@ Output ConnManager::acceptConnections()
     while (gameinfo->getNumPlayers() < MAX_PLAYERS || !gameinfo->getStopConnect())
     {
         newsock = accept(this->socketid, (struct sockaddr *)&newconn, &newconn_size);
+        // notifies the newly connected user that a game already started
         if (gameinfo->getStopConnect())
         {
             char sp = 'S';
             if (send(newsock, &sp, 1, 0) < 0)
             {
                 cout << "Could not notify the player that the game already started..." << endl;
-                // TODO: Handle all active threads if there is a need
+                close(newsock);
+                // TODO Should wait for all threads to finish or just manually abort them...
                 return failure;
             }
             break;
@@ -91,12 +94,8 @@ Output ConnManager::acceptConnections()
         gameinfo->addPlayer(p);
 
         futures.push_back(async(launch::async, &Player::initPlayer, p));                                 // starts a new player's thread
-        waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread
+        waiting_for_dc.push_back(thread(&ConnManager::waitForDisconnect, this, ref(futures.back()), p)); // creating the thread that waits for the player thread to finish
     }
-
-    /*
-    TODO: Start accepting the spectators starting from the newsock
-    */
 
     // accepting spectators
     gameinfo->addSpectator(newsock);
@@ -153,11 +152,12 @@ void ConnManager::waitForDisconnect(future<threadvalue> &fu, Player *p)
 
 void ConnManager::turnRegulator()
 {
-    while (!gameinfo->getStopConnect())
-    {
-        this_thread::sleep_for(chrono::milliseconds(50));
-    }
+    unique_lock<mutex> temp_locker(gameinfo->temp_lock);
+    gameinfo->turns_start.wait(temp_locker, [this]()
+                               { return this->gameinfo->getStopConnect(); });
+    temp_locker.unlock(); // we do not need this lock anyway
 
+    // searches by names rather than positions in the vector this ensures that no active player is skipped
     vector<string> names{};
     for (int i = 0; i < gameinfo->getNumPlayers(); i++)
     {
@@ -169,7 +169,8 @@ void ConnManager::turnRegulator()
     while (!finished)
     {
         thread spectate_thread(&Spectator::spectateGame, spectator);
-        Player *p = gameinfo->getPlayer(names.at(i));
+        Player *p = gameinfo->getPlayer(names.at(i)); // get player by name
+        // in case the player disconnected in the meantime
         if (p == nullptr)
         {
             i = (i + 1) % names.size();
@@ -201,6 +202,7 @@ void ConnManager::turnRegulator()
             break;
         }
         i = (i + 1) % names.size();
+        // waits for the spectate thread to finish - this should actually not offer any waiting at all
         spectate_thread.join();
     }
     return;
