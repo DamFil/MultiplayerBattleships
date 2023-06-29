@@ -1,4 +1,4 @@
-#include "NewPlayer.h"
+/*#include "NewPlayer.h"
 
 int main()
 {
@@ -32,4 +32,4 @@ int main()
     p1->showAttemptsMap();
 
     return 0;
-}
+}*/

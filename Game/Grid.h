@@ -109,7 +109,6 @@ public:
         }
 
         this->battleships.push_back(bs);
-        cout << "The ship has been added successfully!" << endl;
         updateMap();
         return true;
     }
