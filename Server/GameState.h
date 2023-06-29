@@ -162,7 +162,7 @@ public:
         bool ans = true;
         for (int i = 0; i < active_players.size(); i++)
         {
-            ans &= active_players[i]->getReady();
+            ans &= active_players.at(i)->getReady();
         }
 
         if (ans && this->active_players.size() >= 2)
