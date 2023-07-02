@@ -98,10 +98,13 @@ public:
                         }
                     }
                 }
-                else if ((bts->row <= bs->row) && (bts->row >= (bs->row - bs->getLength() + 1)) && ((bs->col >= bts->col) && (bs->col <= (bts->col + bts->getLength() - 1))))
+                else if (bts->orientation == 'H')
                 {
-                    cout << "The added ship collides with an already placed ship!" << endl;
-                    return false;
+                    if ((bts->row <= bs->row) && (bts->row >= (bs->row - bs->getLength() + 1)) && ((bs->col >= bts->col) && (bs->col <= (bts->col + bts->getLength() - 1))))
+                    {
+                        cout << "The added ship collides with an already placed ship!" << endl;
+                        return false;
+                    }
                 }
                 else
                     continue;
